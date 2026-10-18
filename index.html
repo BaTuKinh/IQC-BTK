@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Nội kiểm xét nghiệm</title>
 <style>
-:root{--bg:#f5f6f8;--card:#fff;--ink:#1c2430;--mute:#667085;--line:#e2e6ed;--accent:#1f66d6;--ok:#1a7f5a;--warn:#b86e00;--fail:#c62f3d;--band:#eaf3ff;--band2:#fff6e2;--grid:#9aa4b2;--soft:#f0f2f6}
-@media(prefers-color-scheme:dark){:root{--bg:#12161c;--card:#1a2029;--ink:#e6eaf0;--mute:#9aa4b2;--line:#2b3441;--accent:#6aa9ff;--ok:#4cc38a;--warn:#e8b04a;--fail:#ff6b78;--band:#1c2c44;--band2:#3a2f12;--grid:#5d6879;--soft:#222a35}}
+:root{--ev:#7a4fd1;--bg:#f5f6f8;--card:#fff;--ink:#1c2430;--mute:#667085;--line:#e2e6ed;--accent:#1f66d6;--ok:#1a7f5a;--warn:#b86e00;--fail:#c62f3d;--band:#eaf3ff;--band2:#fff6e2;--grid:#9aa4b2;--soft:#f0f2f6}
+@media(prefers-color-scheme:dark){:root{--ev:#b79bff;--bg:#12161c;--card:#1a2029;--ink:#e6eaf0;--mute:#9aa4b2;--line:#2b3441;--accent:#6aa9ff;--ok:#4cc38a;--warn:#e8b04a;--fail:#ff6b78;--band:#1c2c44;--band2:#3a2f12;--grid:#5d6879;--soft:#222a35}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 header{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
@@ -54,7 +54,7 @@ svg .l2{stroke:var(--warn);stroke-width:1;stroke-dasharray:6 4}
 svg .l3{stroke:var(--fail);stroke-width:1.2}
 svg .tk{fill:var(--mute);font-size:11px}
 svg .ln{fill:none;stroke:var(--accent);stroke-width:1.5;opacity:.8}
-svg .okp{fill:var(--accent)}svg .wp{fill:var(--warn)}svg .fp{fill:var(--fail)}
+svg .okp{fill:var(--accent)}svg .wp{fill:var(--warn)}svg .fp{fill:var(--fail)}svg .evl{stroke:var(--ev);stroke-width:1.4;stroke-dasharray:3 3}svg .evt{fill:var(--ev);font-size:10px;font-weight:700}.evrow td{background:var(--soft)}.evrow b{color:var(--ev)}ul.adv{margin:4px 0 10px;padding-left:20px}ul.adv li{margin:3px 0}.advbox{border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:10px}.advbox h4{margin:0 0 4px;font-size:14px}
 .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--mute);margin:4px 0 8px}
 .legend i{display:inline-block;width:10px;height:10px;margin-right:4px;border-radius:50%;vertical-align:middle}
 dialog{border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);padding:0;width:min(720px,94vw);max-height:92vh}
@@ -96,18 +96,58 @@ const defaultRules={r12:true,r13:true,r22:true,r4s:true,r41:true,r10x:true};
 const ruleNames={r12:'1-2s (cảnh báo)',r13:'1-3s',r22:'2-2s',r4s:'R-4s',r41:'4-1s',r10x:'10x'};
 const PALETTE=['#2f6fed','#d9731a','#1f9d6b','#8a4fd1','#0e9aa7','#c2417c'];
 const LS='iqc.v1',GH='iqc.gh';
+const EVT={maint:{n:'Bảo trì / bảo dưỡng',c:'BT',reset:false},calib:{n:'Hiệu chuẩn',c:'HC',reset:true},service:{n:'Sửa chữa / thay linh kiện',c:'SC',reset:true},reagent:{n:'Đổi lô thuốc thử',c:'TT',reset:true},qclot:{n:'Đổi lô vật liệu QC',c:'LQ',reset:true},other:{n:'Sự kiện khác',c:'•',reset:false}};
+const REASONS=['Thường quy','Chạy lại sau khắc phục','Sau bảo trì','Sau hiệu chuẩn','Sau sửa chữa / thay linh kiện','Đổi lô thuốc thử','Đổi lô vật liệu QC'];
+const evFor=t=>S.events.filter(e=>e.deviceId===t.deviceId&&(!e.testId||e.testId===t.id)).sort((a,b)=>a.ts-b.ts);
+const ADV={
+'1-2s':{n:'Cảnh báo 1-2s: một giá trị vượt ±2SD',
+ cause:['Dao động ngẫu nhiên bình thường: khoảng 5% giá trị QC nằm ngoài ±2SD dù hệ thống đang ổn định','Có thể là dấu hiệu sớm của sai số hệ thống hoặc sai số ngẫu nhiên'],
+ act:['Chưa cần loại bỏ kết quả; xem các quy tắc khác và xu hướng các lần chạy gần nhất','Nếu chỉ vi phạm 1-2s: có thể tiếp tục trả kết quả và theo dõi sát lần QC kế tiếp','Kiểm tra nhanh hạn dùng thuốc thử, vật liệu QC và việc trộn đều QC']},
+'1-3s':{n:'1-3s: một giá trị vượt ±3SD (thường là sai số ngẫu nhiên hoặc sai số hệ thống lớn)',
+ cause:['Bọt khí, tắc hoặc nhiễm bẩn kim hút/ống dẫn; hút sai thể tích mẫu hoặc thuốc thử','Vật liệu QC: nhầm mức hoặc nhầm lọ, hoàn nguyên sai, chưa trộn đều, bay hơi, hết hạn hoặc bảo quản sai nhiệt độ','Thuốc thử hỏng, hết hạn, cạn hoặc nạp sai vị trí','Nhiệt độ buồng ủ hoặc điện áp không ổn định','Nhập sai số liệu (gõ nhầm giá trị hoặc đơn vị)'],
+ act:['Kiểm tra lại số liệu đã nhập, đúng mức QC và đúng xét nghiệm','Chạy lại QC bằng cùng lọ; nếu vẫn lỗi, dùng lọ QC mới','Kiểm tra thuốc thử và các cảnh báo lỗi trên máy; bảo trì kim hút/ống dẫn theo SOP','Nếu nghi lệch hiệu chuẩn: hiệu chuẩn lại, rồi chạy lại QC tất cả các mức']},
+'2-2s':{n:'2-2s: hai giá trị liên tiếp cùng vượt +2SD hoặc cùng vượt -2SD (sai số hệ thống)',
+ cause:['Hiệu chuẩn bị lệch hoặc chất hiệu chuẩn xuống cấp','Thuốc thử xuống cấp, hoặc đổi lô thuốc thử mà chưa hiệu chuẩn lại','Vật liệu QC biến chất, bay hơi hoặc bảo quản sai','Nguồn sáng lão hóa, điện cực (ISE) xuống cấp, nhiệt độ buồng ủ thay đổi','Thay đổi chất lượng nước hoặc dung dịch rửa'],
+ act:['Tạm dừng trả kết quả bệnh nhân của xét nghiệm này cho đến khi QC đạt','Kiểm tra thuốc thử, lọ QC và tình trạng hiệu chuẩn','Hiệu chuẩn lại (hoặc thay thuốc thử/chất hiệu chuẩn mới), rồi chạy lại QC tất cả các mức','Xem lại kết quả bệnh nhân đã trả từ lần QC đạt gần nhất']},
+'R-4s':{n:'R-4s: hai mức QC trong cùng lần chạy lệch ngược chiều, vượt +2SD và -2SD (sai số ngẫu nhiên)',
+ cause:['Kim hút hoặc pipet hoạt động không ổn định, bọt khí, tắc từng phần','Trộn QC hoặc thuốc thử không đều; thao tác pha QC không nhất quán','Dao động điện áp hoặc nhiệt độ, nhiễm bẩn chéo giữa các mẫu'],
+ act:['Tạm dừng trả kết quả, kiểm tra kim hút/ống dẫn, bọt khí, thể tích hút','Chạy lại cả hai mức QC bằng lọ mới, trộn kỹ','Bảo trì/vệ sinh hệ thống hút theo SOP nếu lặp lại','Xem lại kết quả bệnh nhân đã trả từ lần QC đạt gần nhất']},
+'4-1s':{n:'4-1s: bốn giá trị liên tiếp cùng một phía và vượt 1SD (sai số hệ thống nhỏ, đang trôi)',
+ cause:['Thuốc thử hoặc chất hiệu chuẩn xuống cấp dần','Vật liệu QC biến chất dần (mở lọ lâu, bảo quản chưa đúng)','Nguồn sáng, điện cực hoặc bộ phận quang học xuống cấp','Nhiệt độ buồng ủ lệch nhẹ; thay đổi chất lượng nước'],
+ act:['Chưa chắc phải dừng ngay, nhưng cần xử trí trước khi lệch thêm; theo tiêu chí của phòng','Kiểm tra hạn và tình trạng thuốc thử, lọ QC đang dùng','Thay thuốc thử/QC mới hoặc hiệu chuẩn lại nếu cần, rồi chạy lại QC','Ghi sự kiện và theo dõi biểu đồ sau xử trí']},
+'10x':{n:'10x: mười giá trị liên tiếp cùng một phía so với giá trị trung bình (lệch hệ thống kéo dài)',
+ cause:['Mean/SD khai báo chưa phù hợp thực tế (mean mục tiêu đặt sai hoặc đã có thay đổi thật sau đổi lô/hiệu chuẩn)','Sai số hệ thống nhỏ nhưng kéo dài: hiệu chuẩn lệch, thuốc thử hoặc QC xuống cấp từ từ'],
+ act:['So sánh mean thực tế với mean mục tiêu; nếu hệ thống ổn định ở mức mới, xem xét thiết lập lại mean theo quy trình của phòng','Nếu nghi sai số thật: kiểm tra hiệu chuẩn, thuốc thử, QC và xử trí như 4-1s','Ghi lại quyết định và lý do trong hành động khắc phục']},
+'Vượt TEa':{n:'Vượt TEa: sai số của kết quả QC so với mean mục tiêu lớn hơn sai số tổng cho phép',
+ cause:['Sai số hệ thống (bias) lớn: hiệu chuẩn lệch, thuốc thử hoặc QC có vấn đề','Độ không chính xác (CV) cao, hoặc một lần sai số ngẫu nhiên lớn','Mean mục tiêu hoặc TEa khai báo chưa hợp lý'],
+ act:['Xử trí như vi phạm quy tắc loại bỏ: dừng trả kết quả, tìm nguyên nhân, chạy lại QC','Kiểm tra mean và TEa đã khai báo có đúng không','Hiệu chuẩn lại hoặc bảo trì nếu bias lặp lại, rồi chạy lại QC']},
+'Sai kết quả':{n:'Định tính: kết quả QC khác kết quả mong đợi',
+ cause:['Nhầm loại chứng hoặc đặt sai vị trí; chứng hết hạn, hỏng hoặc bị nhiễm','Test/que thử/bộ kit hết hạn hoặc bảo quản sai (ẩm, nóng, ánh sáng)','Sai thao tác: thể tích mẫu, thứ tự thêm, thời gian ủ hoặc thời gian đọc','Lô test hoặc lô chứng mới chưa được kiểm tra','Lỗi bộ đọc hoặc thiết bị'],
+ act:['Không trả kết quả bệnh nhân của xét nghiệm này cho đến khi QC đạt','Chạy lại với chứng mới và test cùng lô khác; kiểm tra hạn và bảo quản','Kiểm tra lại thời gian ủ/đọc và thao tác theo hướng dẫn của nhà sản xuất','Nếu lặp lại: đổi lô test, kiểm tra thiết bị, liên hệ nhà cung cấp','Xem lại kết quả bệnh nhân đã trả từ lần QC đạt gần nhất']},
+'step-dev':{n:'Thang đo: kết quả lệch quá số bậc cho phép so với kết quả mong đợi',
+ cause:['Que thử/test xuống cấp, hết hạn hoặc bảo quản sai (ẩm, ánh sáng, nhiệt độ)','Vật liệu QC biến chất hoặc nhiễm bẩn','Sai thời gian ủ/đọc, thể tích mẫu hoặc thao tác nhúng que','Bộ đọc cần hiệu chuẩn hoặc vệ sinh; lô mới chưa kiểm tra'],
+ act:['Không trả kết quả bệnh nhân của xét nghiệm đó cho đến khi QC đạt','Chạy lại với QC mới và que thử mới (lấy từ hộp khác nếu có)','Kiểm tra hạn, bảo quản, thời gian đọc; bảo trì/hiệu chuẩn bộ đọc theo SOP','Xem lại kết quả bệnh nhân đã trả từ lần QC đạt gần nhất']},
+'step-near':{n:'Thang đo: kết quả nằm sát giới hạn sai lệch cho phép',
+ cause:['Dao động bình thường của phương pháp bán định lượng','Bắt đầu xuống cấp của que thử, QC hoặc bộ đọc'],
+ act:['Chấp nhận nếu còn trong giới hạn, nhưng theo dõi các lần chạy tiếp theo','Kiểm tra hạn và bảo quản que thử/QC']},
+'step-trend':{n:'Thang đo: bốn lần liên tiếp lệch cùng một phía',
+ cause:['Que thử/test hoặc QC xuống cấp dần (ẩm, ánh sáng, mở hộp lâu)','Bộ đọc lệch dần hoặc bẩn','Nhiệt độ môi trường hoặc thời gian đọc thay đổi'],
+ act:['Kiểm tra hạn, cách bảo quản, thời gian đọc','Thay hộp que thử hoặc lọ QC mới và chạy lại','Vệ sinh/hiệu chuẩn bộ đọc nếu có, ghi sự kiện sau xử trí']}
+};
+const ADV_GENERAL=['Với vi phạm loại “từ chối” (đỏ): tạm dừng trả kết quả bệnh nhân của xét nghiệm đó trên thiết bị này cho đến khi xử trí xong và QC đạt','Kiểm tra nhanh: đúng mức và đúng lọ QC, hạn dùng, cách bảo quản và trộn; số liệu đã nhập có đúng không','Kiểm tra thuốc thử (hạn dùng, ổn định trên máy, thể tích, bọt khí), tình trạng hiệu chuẩn và cảnh báo lỗi trên máy','Chạy lại QC bằng chính lọ đó; nếu vẫn lỗi thì dùng lọ QC mới','Nếu vẫn lỗi: bảo trì/vệ sinh theo SOP, hiệu chuẩn lại, thay thuốc thử hoặc chất hiệu chuẩn; sau mỗi bước chạy lại QC tất cả các mức','Khi QC đạt: ghi hành động khắc phục và ghi sự kiện (bảo trì, hiệu chuẩn…) vào app, chạy QC với lý do tương ứng','Xem lại kết quả bệnh nhân đã trả từ lần QC đạt gần nhất; cân nhắc chạy lại mẫu và hiệu đính nếu cần','Báo người phụ trách hoặc nhà cung cấp nếu lỗi lặp lại hoặc không xác định được nguyên nhân'];
+const advKey=f=>f.startsWith('2-2s')?'2-2s':f.startsWith('Lệch ')?'step-dev':f==='Sát giới hạn'?'step-near':f.startsWith('4 lần lệch')?'step-trend':f;
 
-let S={version:1,devices:[],tests:[],results:[]};
+let S={version:1,devices:[],tests:[],results:[],events:[]};
 let UI={deviceId:null,testId:null,lastN:40,flash:null,showAll:false};
 const T=id=>S.tests.find(t=>t.id===id), D=id=>S.devices.find(d=>d.id===id);
 
 /* ---------- lưu trữ ---------- */
-function loadLocal(){try{const j=localStorage.getItem(LS);if(j){S=JSON.parse(j);return true}}catch(e){}return false}
+function loadLocal(){try{const j=localStorage.getItem(LS);if(j){S=JSON.parse(j);S.events??=[];return true}}catch(e){}return false}
 let pushTimer=null;
 function save(){S.updatedAt=Date.now();try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){toast('Không lưu được vào trình duyệt')}
   const c=ghCfg();if(c.auto&&c.token&&c.repo){clearTimeout(pushTimer);pushTimer=setTimeout(()=>ghPush(c).then(()=>toast('Đã đẩy lên GitHub')).catch(e=>toast('Lỗi GitHub: '+e.message)),4000)}}
 function toast(msg){const t=$('#toast');t.textContent=msg;t.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(()=>t.style.display='none',3200)}
-function normalize(d){if(!d||!Array.isArray(d.devices)||!Array.isArray(d.tests)||!Array.isArray(d.results))throw new Error('File không đúng định dạng');return d}
+function normalize(d){if(!d||!Array.isArray(d.devices)||!Array.isArray(d.tests)||!Array.isArray(d.results))throw new Error('File không đúng định dạng');d.events??=[];return d}
 
 /* ---------- đánh giá quy tắc ---------- */
 function evalTest(t){
@@ -118,8 +158,8 @@ function evalTest(t){
 }
 function evalQuant(t,res,out){
   const R={...defaultRules,...(t.rules||{})};
-  const groups={};
-  res.forEach(r=>{(groups[[r.levelId,r.lot||'',r.mean,r.sd].join('|')]??=[]).push(r)});
+  const groups={},rs=evFor(t).filter(e=>e.reset),ep=r=>rs.filter(e=>e.ts<=r.ts).length;
+  res.forEach(r=>{(groups[[r.levelId,r.lot||'',r.mean,r.sd,ep(r)].join('|')]??=[]).push(r)});
   const addF=(r,f,sev)=>{const o=out[r.id];if(!o.flags.includes(f))o.flags.push(f);if(sev==='fail')o.status='fail';else if(o.status!=='fail')o.status='warn'};
   Object.values(groups).forEach(list=>{
     list.forEach((r,i)=>{
@@ -150,8 +190,8 @@ function evalQuant(t,res,out){
 }
 function evalStep(t,res,out){
   const idx=v=>t.scale.indexOf(v);
-  const groups={};
-  res.forEach(r=>{(groups[[r.levelId,r.lot||'',r.expected,r.tol].join('|')]??=[]).push(r)});
+  const groups={},rs=evFor(t).filter(e=>e.reset),ep=r=>rs.filter(e=>e.ts<=r.ts).length;
+  res.forEach(r=>{(groups[[r.levelId,r.lot||'',r.expected,r.tol,ep(r)].join('|')]??=[]).push(r)});
   Object.values(groups).forEach(list=>{
     list.forEach((r,i)=>{
       const dev=idx(r.value)-idx(r.expected),tol=r.tol||0;
@@ -186,9 +226,21 @@ function xTicks(items,X,y){
   items.forEach((p,i)=>{if(i%step===0||i===n-1)s+=`<text x="${X(i)}" y="${y}" class="tk" text-anchor="middle">${fmtD(p.r.ts)}</text>`});
   return s;
 }
-function legend(extra=''){return `<div class="legend"><span><i style="background:var(--accent)"></i>Đạt</span><span>▲ Cảnh báo</span><span>■ Vi phạm / ngoài giới hạn</span>${extra}</div>`}
+function legend(extra=''){return `<div class="legend"><span><i style="background:var(--accent)"></i>Đạt</span><span>▲ Cảnh báo</span><span>■ Vi phạm / ngoài giới hạn</span>${extra}${S.events.length?'<span style="color:var(--ev)">┆ Sự kiện thiết bị (BT bảo trì · HC hiệu chuẩn · SC sửa chữa · TT thuốc thử · LQ lô QC)</span>':''}</div>`}
 function lastN(arr){return UI.lastN>0?arr.slice(-UI.lastN):arr}
 
+function evLines(t,ts,X,y1,y2,xmax){
+  const n=ts.length;if(!n)return'';let s='';
+  evFor(t).forEach(e=>{
+    const i=ts.findIndex(v=>v>=e.ts);
+    if(i===0)return;
+    let x;
+    if(i<0){x=X(n-1)+(n>1?(X(1)-X(0))/2:14);if(x>xmax)x=xmax}else x=(X(i-1)+X(i))/2;
+    const tip=`${EVT[e.type].n} · ${fmtDT(e.ts)}${e.note?' · '+e.note:''}`;
+    s+=`<g><line x1="${x}" x2="${x}" y1="${y1}" y2="${y2}" class="evl"/><text x="${x}" y="${y1-2}" class="evt" text-anchor="middle">${EVT[e.type].c}</text><title>${esc(tip)}</title></g>`;
+  });
+  return s;
+}
 function ljChart(level,pts,t){
   const d=t.dec??2,n=pts.length,W=840,H=300,L=64,R=48,Tp=14,B=36;
   const m=level.mean,s=level.sd;
@@ -201,6 +253,7 @@ function ljChart(level,pts,t){
     g+=`<line x1="${L}" x2="${W-R}" y1="${y}" y2="${y}" class="${c}"/><text x="${L-6}" y="${y+4}" class="tk" text-anchor="end">${fmt(m+k*s,d)}</text><text x="${W-R+6}" y="${y+4}" class="tk">${k===0?'TB':(k>0?'+':'')+k+'SD'}</text>`;
   });
   if(n>1)g+=`<path class="ln" d="${pts.map((p,i)=>(i?'L':'M')+X(i)+' '+Y(p.r.value)).join('')}"/>`;
+  g+=evLines(t,pts.map(p=>p.r.ts),X,Tp,H-B,W-R-4);
   pts.forEach((p,i)=>{const z=p.o.z;g+=marker(X(i),Y(p.r.value),p.o.status,`${fmtDT(p.r.ts)} | ${fmt(p.r.value,d)} ${t.unit||''} | z=${fmt(z,2)}${p.o.flags.length?' | '+p.o.flags.join(', '):''}`)});
   g+=xTicks(pts,X,H-12);
   return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Biểu đồ Levey-Jennings ${esc(level.name)}">${g}</svg>`;
@@ -215,6 +268,7 @@ function zChart(t,levelSeries){
   [[3,'l3'],[2,'l2'],[1,'l1'],[0,'l0'],[-1,'l1'],[-2,'l2'],[-3,'l3']].forEach(([k,c])=>{const y=Y(k);
     g+=`<line x1="${L}" x2="${W-R}" y1="${y}" y2="${y}" class="${c}"/><text x="${L-6}" y="${y+4}" class="tk" text-anchor="end">${k>0?'+':''}${k}</text>`});
   g+=`<text x="${W-R+6}" y="${Y(0)+4}" class="tk">z (SD)</text>`;
+  g+=evLines(t,runs.map(r=>new Date(r+'T12:00').getTime()),X,Tp,H-B,W-R-4);
   levelSeries.forEach((ls,li)=>{
     const col=PALETTE[li%PALETTE.length];
     const pp=ls.pts.filter(p=>runs.includes(p.r.run)).map(p=>({x:X(runs.indexOf(p.r.run)),y:Y(p.o.z),p}));
@@ -239,6 +293,7 @@ function stepChart(level,pts,t){
   const valid=pts.filter(p=>sc.indexOf(p.r.value)>=0);
   const vn=valid.length,X2=i=>vn<=1?L+(W-L-R)/2:L+(W-L-R)*i/(vn-1);
   if(vn>1)g+=`<path class="ln" d="${valid.map((p,i)=>(i?'L':'M')+X2(i)+' '+Y(sc.indexOf(p.r.value))).join('')}"/>`;
+  g+=evLines(t,valid.map(p=>p.r.ts),X2,Tp,H-B,W-R-4);
   valid.forEach((p,i)=>{g+=marker(X2(i),Y(sc.indexOf(p.r.value)),p.o.status,`${fmtDT(p.r.ts)} | ${p.r.value} (mục tiêu: ${p.r.expected})${p.o.flags.length?' | '+p.o.flags.join(', '):''}`)});
   g+=xTicks(valid,X2,H-10);
   return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Biểu đồ theo dõi ${esc(level.name)}">${g}</svg>`;
@@ -266,12 +321,12 @@ function renderMain(){
   }
   const dev=D(t.deviceId),d=t.dec??2,{res,out}=evalTest(t);
   let h=`<div class="card"><div class="head"><h2>${esc(t.name)}</h2><span class="badge">${typeName[t.type]}</span><span class="muted">${esc(dev?.name||'')}${t.unit?' · '+esc(t.unit):''}${t.tea&&t.tea.value>0?` · TEa ${t.tea.value}${t.tea.kind==='pct'?'%':' '+esc(t.unit||'')}`:''}</span><span class="spacer"></span>
-  <button data-act="editTest" data-id="${t.id}">Khai báo</button><button data-act="csv" data-id="${t.id}">CSV</button><button class="danger" data-act="delTest" data-id="${t.id}">Xóa</button></div>${entryHTML(t)}</div>`;
+  <button data-act="newEvent" data-id="${t.id}">＋ Sự kiện</button><button data-act="editTest" data-id="${t.id}">Khai báo</button><button data-act="csv" data-id="${t.id}">CSV</button><button class="danger" data-act="delTest" data-id="${t.id}">Xóa</button></div>${entryHTML(t)}</div>`;
   if(UI.flash){h+=UI.flash;UI.flash=null}
   else if(res.length){
     const last=res[res.length-1].run;
     const bad=res.filter(r=>r.run===last&&out[r.id]&&out[r.id].flags.length);
-    if(bad.length)h+=`<div class="alert ${bad.some(r=>out[r.id].status==='fail')?'fail':''}"><b>Lần chạy gần nhất (${last.split('-').reverse().join('/')}):</b> ${bad.map(r=>`${esc(r.levelName)}: ${esc(out[r.id].flags.join(', '))}`).join(' · ')}</div>`;
+    if(bad.length)h+=`<div class="alert ${bad.some(r=>out[r.id].status==='fail')?'fail':''}"><b>Lần chạy gần nhất (${last.split('-').reverse().join('/')}):</b> ${bad.map(r=>`${esc(r.levelName)}: ${esc(out[r.id].flags.join(', '))}`).join(' · ')}<br>${adviceBtn(bad.flatMap(r=>out[r.id].flags))}</div>`;
   }
   if(!t.levels.length)h+=`<div class="card muted">Chưa có mức QC nào — bấm “Khai báo” để thêm.</div>`;
   else{
@@ -300,9 +355,9 @@ function renderMain(){
 }
 function entryHTML(t){
   if(!t.levels.length)return'';
-  const d=t.dec??2;
+  const d=t.dec??2,dr=defaultReason(t);
   const f=t.levels.map(l=>`<label class="fld"><span>${esc(l.name)}${l.lot?` <small>(lô ${esc(l.lot)})</small>`:''}</span>${t.type==='quant'?`<input name="v_${l.id}" inputmode="decimal" autocomplete="off" placeholder="${esc(t.unit||'giá trị')}">`:`<select name="v_${l.id}"><option value="">— không chạy —</option>${t.scale.map(s=>`<option>${esc(s)}</option>`).join('')}</select>`}<small>Mục tiêu: ${t.type==='quant'?fmt(l.mean,d)+' ± '+fmt(l.sd,d):esc(l.expected)+(t.type==='semi'?' (±'+(l.tol||0)+' bậc)':'')}</small></label>`).join('');
-  return `<form id="entryForm" data-test="${t.id}"><div class="row">${f}</div><div class="row" style="margin-top:10px"><label class="fld"><span>Ngày giờ</span><input type="datetime-local" name="dt" value="${nowLocal()}" required></label><label class="fld"><span>Người thực hiện</span><input name="op" autocomplete="off"></label><label class="fld" style="flex:2 1 220px"><span>Ghi chú</span><input name="note" autocomplete="off"></label><button class="pri" type="submit" style="flex:0 0 auto">Lưu kết quả</button></div></form>`;
+  return `<form id="entryForm" data-test="${t.id}"><div class="row">${f}</div><div class="row" style="margin-top:10px"><label class="fld"><span>Ngày giờ</span><input type="datetime-local" name="dt" value="${nowLocal()}" required></label><label class="fld"><span>Lý do chạy QC</span><select name="reason">${REASONS.map(x=>`<option ${x===dr?'selected':''}>${x}</option>`).join('')}</select></label><label class="fld"><span>Người thực hiện</span><input name="op" autocomplete="off"></label><label class="fld" style="flex:2 1 220px"><span>Ghi chú</span><input name="note" autocomplete="off"></label><button class="pri" type="submit" style="flex:0 0 auto">Lưu kết quả</button></div></form>`;
 }
 function statsHTML(t,res,out){
   if(t.type==='quant'){
@@ -324,12 +379,18 @@ function statsHTML(t,res,out){
   return `<div class="card"><h2>Thống kê (lô hiện tại)</h2><div class="scroll"><table><tr><th>Mức</th><th>Mục tiêu</th><th>n</th><th>Tỷ lệ đạt</th><th>Không đạt</th></tr>${rows}</table></div></div>`;
 }
 function tableHTML(t,res,out){
-  const d=t.dec??2,list=[...res].reverse(),shown=UI.showAll?list:list.slice(0,40);
-  const rows=shown.map(r=>{const o=out[r.id]||{flags:[],status:'ok'};
+  const d=t.dec??2;
+  const items=[...res.map(r=>({k:'r',ts:r.ts,r})),...evFor(t).map(e=>({k:'e',ts:e.ts,e}))].sort((a,b)=>b.ts-a.ts);
+  const shown=UI.showAll?items:items.slice(0,40);
+  const rows=shown.map(it=>{
+    if(it.k==='e'){const e=it.e,ev=EVT[e.type];
+      return `<tr class="evrow"><td>${fmtDT(e.ts)}</td><td colspan="5"><b>${ev.c}</b> <b>${esc(ev.n)}</b>${e.testId?'':' <small class="muted">(toàn thiết bị)</small>'}${e.note?' — '+esc(e.note):''}${e.op?` <small class="muted">· ${esc(e.op)}</small>`:''}${e.reset?' <small class="muted">· bắt đầu chuỗi quy tắc mới</small>':''}</td><td><button class="sm danger" data-act="delEvt" data-id="${e.id}" title="Xóa sự kiện">✕</button></td></tr>`}
+    const r=it.r,o=out[r.id]||{flags:[],status:'ok'};
     const dv=t.type==='quant'?`${fmt(r.value,d)} <small class="muted">z ${fmt(o.z,2)}</small>`:`${esc(r.value)} <small class="muted">${t.type==='semi'?'lệch '+(o.dev>0?'+':'')+o.dev:''}</small>`;
     const stl={ok:'Đạt',warn:'Cảnh báo',fail:'Vi phạm'}[o.status];
-    return `<tr><td>${fmtDT(r.ts)}</td><td>${esc(r.levelName)}${r.lot?`<br><small class="muted">lô ${esc(r.lot)}</small>`:''}</td><td>${dv}</td><td><span class="badge ${o.status}">${stl}</span> ${esc(o.flags.join(', '))}</td><td>${esc(r.op||'')}</td><td>${esc(r.note||'')}${r.action?`<br><small><b>Khắc phục:</b> ${esc(r.action)}</small>`:''}</td><td style="white-space:nowrap">${o.status!=='ok'?`<button class="sm" data-act="action" data-id="${r.id}" title="Ghi hành động khắc phục">⚑</button> `:''}<button class="sm danger" data-act="delRes" data-id="${r.id}" title="Xóa">✕</button></td></tr>`}).join('');
-  return `<div class="card"><h2>Kết quả đã nhập (${res.length})</h2>${res.length?`<div class="scroll"><table><tr><th>Thời gian</th><th>Mức</th><th>Kết quả</th><th>Đánh giá</th><th>Người TH</th><th>Ghi chú</th><th></th></tr>${rows}</table></div>${list.length>40?`<p><button class="sm" data-act="toggleAll">${UI.showAll?'Thu gọn':'Xem tất cả'}</button></p>`:''}`:'<div class="muted">Chưa có dữ liệu.</div>'}</div>`;
+    const rb=r.reason&&r.reason!=='Thường quy'?`<br><span class="badge">${esc(r.reason)}</span>`:'';
+    return `<tr><td>${fmtDT(r.ts)}${rb}</td><td>${esc(r.levelName)}${r.lot?`<br><small class="muted">lô ${esc(r.lot)}</small>`:''}</td><td>${dv}</td><td><span class="badge ${o.status}">${stl}</span> ${esc(o.flags.join(', '))}</td><td>${esc(r.op||'')}</td><td>${esc(r.note||'')}${r.action?`<br><small><b>Khắc phục:</b> ${esc(r.action)}</small>`:''}</td><td style="white-space:nowrap">${o.status!=='ok'?`<button class="sm" data-act="advice" data-id="${r.id}" title="Gợi ý nguyên nhân & xử trí">💡</button> <button class="sm" data-act="action" data-id="${r.id}" title="Ghi hành động khắc phục">⚑</button> `:''}<button class="sm danger" data-act="delRes" data-id="${r.id}" title="Xóa">✕</button></td></tr>`}).join('');
+  return `<div class="card"><h2>Kết quả và sự kiện thiết bị (${res.length} kết quả)</h2>${items.length?`<div class="scroll"><table><tr><th>Thời gian</th><th>Mức</th><th>Kết quả</th><th>Đánh giá</th><th>Người TH</th><th>Ghi chú</th><th></th></tr>${rows}</table></div>${items.length>40?`<p><button class="sm" data-act="toggleAll">${UI.showAll?'Thu gọn':'Xem tất cả'}</button></p>`:''}`:'<div class="muted">Chưa có dữ liệu.</div>'}</div>`;
 }
 
 /* ---------- nhập kết quả ---------- */
@@ -341,13 +402,13 @@ function addRun(fd,form){
     const raw=fd.get('v_'+l.id);if(raw==null||String(raw).trim()==='')continue;
     let value=raw;
     if(t.type==='quant'){value=num(raw);if(isNaN(value)){toast(`Giá trị “${raw}” của ${l.name} không hợp lệ`);return}}
-    added.push({id:uid(),testId:t.id,levelId:l.id,levelName:l.name,run,ts,value,lot:l.lot||'',mean:t.type==='quant'?l.mean:undefined,sd:t.type==='quant'?l.sd:undefined,expected:t.type!=='quant'?l.expected:undefined,tol:t.type!=='quant'?(l.tol||0):undefined,op:fd.get('op')||'',note:fd.get('note')||'',action:''});
+    added.push({id:uid(),testId:t.id,levelId:l.id,levelName:l.name,run,ts,value,lot:l.lot||'',mean:t.type==='quant'?l.mean:undefined,sd:t.type==='quant'?l.sd:undefined,expected:t.type!=='quant'?l.expected:undefined,tol:t.type!=='quant'?(l.tol||0):undefined,op:fd.get('op')||'',reason:fd.get('reason')||'Thường quy',note:fd.get('note')||'',action:''});
   }
   if(!added.length){toast('Chưa nhập kết quả nào');return}
   S.results.push(...added);save();
   const {out}=evalTest(t),ids=new Set(added.map(r=>r.id));
   const flagged=added.filter(r=>out[r.id].flags.length);
-  UI.flash=flagged.length?`<div class="alert ${flagged.some(r=>out[r.id].status==='fail')?'fail':''}"><b>Vừa lưu — cần chú ý:</b> ${flagged.map(r=>`${esc(r.levelName)}: ${esc(out[r.id].flags.join(', '))}`).join(' · ')}<br><small>Bấm ⚑ ở bảng bên dưới để ghi hành động khắc phục.</small></div>`:`<div class="alert okk"><b>Đã lưu ${added.length} kết quả — tất cả đạt.</b></div>`;
+  UI.flash=flagged.length?`<div class="alert ${flagged.some(r=>out[r.id].status==='fail')?'fail':''}"><b>Vừa lưu — cần chú ý:</b> ${flagged.map(r=>`${esc(r.levelName)}: ${esc(out[r.id].flags.join(', '))}`).join(' · ')}<br>${adviceBtn(flagged.flatMap(r=>out[r.id].flags))} <small>Bấm ⚑ ở bảng bên dưới để ghi hành động khắc phục.</small></div>`:`<div class="alert okk"><b>Đã lưu ${added.length} kết quả — tất cả đạt.</b></div>`;
   render();
 }
 
@@ -374,7 +435,7 @@ function editDevice(id){
     const n=S.tests.filter(t=>t.deviceId===id).length;
     if(!confirm(`Xóa thiết bị “${d.name}” cùng ${n} xét nghiệm và toàn bộ kết quả của chúng?`))return;
     const ids=new Set(S.tests.filter(t=>t.deviceId===id).map(t=>t.id));
-    S.results=S.results.filter(r=>!ids.has(r.testId));S.tests=S.tests.filter(t=>t.deviceId!==id);S.devices=S.devices.filter(x=>x.id!==id);
+    S.results=S.results.filter(r=>!ids.has(r.testId));S.events=S.events.filter(e=>e.deviceId!==id);S.tests=S.tests.filter(t=>t.deviceId!==id);S.devices=S.devices.filter(x=>x.id!==id);
     if(ids.has(UI.testId))UI.testId=null;save();render();$('#m').close();
   };
 }
@@ -426,20 +487,56 @@ function dataDialog(){
   const c=ghCfg();
   modal('Dữ liệu & đồng bộ GitHub',`<h2>Sao lưu</h2><div class="row"><button id="bExp">Tải xuống JSON</button><button id="bImp">Nạp từ file JSON…</button><button id="bCsv">Xuất tất cả CSV</button></div><input type="file" id="fImp" accept="application/json,.json" style="display:none">
   <h2 style="margin-top:18px">Đồng bộ GitHub</h2><p class="muted" style="font-size:13px;margin-top:0">Dữ liệu được ghi vào một file JSON trong repo của bạn. Token chỉ lưu trong trình duyệt này. Nên dùng <b>fine-grained token</b> chỉ cấp quyền <i>Contents: Read and write</i> cho đúng repo này.</p>
-  <div class="row"><label class="fld"><span>Repo (chủ/tên)</span><input id="gr" value="${esc(c.repo||'')}" placeholder="vtk-vikki/iqc-data"></label><label class="fld"><span>Nhánh</span><input id="gb" value="${esc(c.branch||'main')}"></label><label class="fld"><span>Đường dẫn file</span><input id="gp" value="${esc(c.path||'data.json')}"></label></div>
+  <div class="row"><label class="fld"><span>Repo (chủ/tên)</span><input id="gr" value="${esc(c.repo||'')}" placeholder="ten-github/ten-repo"></label><label class="fld"><span>Nhánh</span><input id="gb" value="${esc(c.branch||'main')}"></label><label class="fld"><span>Đường dẫn file</span><input id="gp" value="${esc(c.path||'data.json')}"></label></div>
   <label class="fld" style="margin-top:10px"><span>Personal access token</span><input id="gt" type="password" value="${esc(c.token||'')}" autocomplete="off"></label>
   <div class="chk" style="margin:10px 0"><label><input type="checkbox" id="ga" ${c.auto?'checked':''}>Tự động đẩy lên GitHub sau mỗi lần lưu</label></div>
   <div class="row"><button id="gPush" class="pri">⬆ Đẩy lên GitHub</button><button id="gPull">⬇ Tải từ GitHub</button></div>
   <h2 style="margin-top:18px">Nguy hiểm</h2><button class="danger" id="bClr">Xóa toàn bộ dữ liệu trong trình duyệt</button>`,null);
-  const rd=()=>{const o={repo:$('#gr').value.trim(),branch:$('#gb').value.trim()||'main',path:$('#gp').value.trim()||'data.json',token:$('#gt').value.trim(),auto:$('#ga').checked};localStorage.setItem(GH,JSON.stringify(o));return o};
+  const rd=()=>{const o={...ghCfg(),repo:$('#gr').value.trim(),branch:$('#gb').value.trim()||'main',path:$('#gp').value.trim()||'data.json',token:$('#gt').value.trim(),auto:$('#ga').checked};localStorage.setItem(GH,JSON.stringify(o));return o};
   $('#bExp').onclick=()=>dl('iqc-data.json',JSON.stringify(S,null,1),'application/json');
   $('#bCsv').onclick=()=>csv(null);
   $('#bImp').onclick=()=>$('#fImp').click();
   $('#fImp').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const d=normalize(JSON.parse(await f.text()));if(!confirm('Thay toàn bộ dữ liệu hiện tại bằng nội dung file này?'))return;S=d;UI.testId=null;save();render();$('#m').close();toast('Đã nạp dữ liệu')}catch(err){toast('Lỗi: '+err.message)}};
-  $('#gPush').onclick=async()=>{const c=rd();if(!c.repo||!c.token)return toast('Cần nhập repo và token');toast('Đang đẩy…');try{await ghPush(c);toast('Đã đẩy lên GitHub')}catch(e){toast('Lỗi GitHub: '+e.message)}};
-  $('#gPull').onclick=async()=>{const c=rd();if(!c.repo)return toast('Cần nhập repo');if(!confirm('Thay dữ liệu hiện tại bằng bản trên GitHub?'))return;toast('Đang tải…');try{S=normalize(await ghPull(c));UI.testId=null;save();render();$('#m').close();toast('Đã tải từ GitHub')}catch(e){toast('Lỗi GitHub: '+e.message)}};
+  $('#gPush').onclick=async()=>{const c=rd();if(!c.repo||!c.token)return toast('Cần nhập repo và token');toast('Đang đẩy…');try{try{await ghPush(c)}catch(e){if(e.code==='CONFLICT'&&confirm(e.message+'\n\nVẫn ghi đè dữ liệu trên GitHub bằng dữ liệu của máy này?'))await ghPush(c,true);else throw e}toast('Đã đẩy lên GitHub')}catch(e){toast('Lỗi GitHub: '+e.message)}};
+  $('#gPull').onclick=async()=>{const c=rd();if(!c.repo)return toast('Cần nhập repo');if(!confirm('Thay dữ liệu hiện tại bằng bản trên GitHub?'))return;toast('Đang tải…');try{S=normalize(await ghPull(c));setSync(S.updatedAt||0);localStorage.setItem(LS,JSON.stringify(S));UI.testId=S.tests[0]?.id||null;render();$('#m').close();toast('Đã tải từ GitHub')}catch(e){toast('Lỗi GitHub: '+e.message)}};
   $('#ga').onchange=rd;
-  $('#bClr').onclick=()=>{if(confirm('Xóa TOÀN BỘ thiết bị, xét nghiệm, kết quả trong trình duyệt này? (không ảnh hưởng bản trên GitHub)')){S={version:1,devices:[],tests:[],results:[]};UI.testId=null;save();render();$('#m').close()}};
+  $('#bClr').onclick=()=>{if(confirm('Xóa TOÀN BỘ thiết bị, xét nghiệm, kết quả trong trình duyệt này? (không ảnh hưởng bản trên GitHub)')){S={version:1,devices:[],tests:[],results:[],events:[]};UI.testId=null;save();render();$('#m').close()}};
+}
+
+/* ---------- gợi ý, hành động khắc phục, sự kiện ---------- */
+function defaultReason(t){
+  const {res,out}=evalTest(t),last=res[res.length-1];
+  const ev=evFor(t).filter(e=>e.type!=='other'&&(!last||e.ts>last.ts)).pop();
+  if(ev)return{maint:'Sau bảo trì',calib:'Sau hiệu chuẩn',service:'Sau sửa chữa / thay linh kiện',reagent:'Đổi lô thuốc thử',qclot:'Đổi lô vật liệu QC'}[ev.type];
+  if(last&&out[last.id]&&out[last.id].status==='fail')return'Chạy lại sau khắc phục';
+  return'Thường quy';
+}
+const adviceBtn=flags=>{const u=[...new Set(flags)].filter(f=>ADV[advKey(f)]);return u.length?`<button class="sm" data-act="advice" data-flags="${esc(u.join('||'))}">💡 Gợi ý nguyên nhân và xử trí</button>`:''};
+function showAdvice(flags){
+  const keys=[...new Set(flags.map(advKey))].filter(k=>ADV[k]);
+  const li=a=>`<ul class="adv">${a.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`;
+  let h=keys.length?keys.map(k=>`<div class="advbox"><h4>${esc(ADV[k].n)}</h4><b style="font-size:13px">Nguyên nhân có thể</b>${li(ADV[k].cause)}<b style="font-size:13px">Hướng xử trí</b>${li(ADV[k].act)}</div>`).join(''):'<p class="muted">Không có gợi ý cho trường hợp này.</p>';
+  h+=`<div class="advbox"><h4>Quy trình chung khi QC vi phạm</h4><ol class="adv">${ADV_GENERAL.map(x=>`<li>${esc(x)}</li>`).join('')}</ol></div><p class="muted" style="font-size:13px">Gợi ý mang tính tham khảo theo thông lệ phòng xét nghiệm. Luôn ưu tiên SOP của phòng, hướng dẫn của nhà sản xuất thiết bị và thuốc thử.</p>`;
+  modal('Gợi ý nguyên nhân và xử trí',h,null);
+}
+function editAction(id){
+  const r=S.results.find(x=>x.id===id);
+  const quick=['Chạy lại QC cùng lọ','Chạy lại QC bằng lọ mới','Kiểm tra/thay thuốc thử','Hiệu chuẩn lại','Bảo trì / vệ sinh','Báo trưởng khoa / nhà cung cấp','Xem lại kết quả bệnh nhân'];
+  modal('Hành động khắc phục',`<p class="muted">${esc(r.levelName)} · ${fmtDT(r.ts)}</p><textarea id="act" rows="4">${esc(r.action||'')}</textarea><div class="row" style="margin-top:8px">${quick.map(q=>`<button type="button" class="sm" data-q="${esc(q)}" style="flex:0 0 auto">${esc(q)}</button>`).join('')}</div><p class="muted" style="font-size:13px">Sau khi xử trí, chạy lại QC và chọn lý do “Chạy lại sau khắc phục” (hoặc ghi thêm sự kiện bảo trì/hiệu chuẩn bằng nút ＋ Sự kiện).</p>`,()=>{r.action=$('#act').value.trim();save();render()});
+  $('#mb').querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>{const a=$('#act');a.value=(a.value.trim()?a.value.trim().replace(/[.;]+$/,'')+'; ':'')+b.dataset.q});
+}
+function editEvent(testId){
+  const t=T(testId),dev=D(t.deviceId);
+  modal('Ghi sự kiện thiết bị',`<div class="row"><label class="fld"><span>Loại sự kiện</span><select id="et">${Object.entries(EVT).map(([k,v])=>`<option value="${k}">${v.n}</option>`).join('')}</select></label><label class="fld"><span>Ngày giờ hoàn tất</span><input type="datetime-local" id="ed" value="${nowLocal()}"></label></div>
+  <div class="row" style="margin-top:10px"><label class="fld"><span>Áp dụng cho</span><select id="es"><option value="dev">Tất cả xét nghiệm của ${esc(dev.name)}</option><option value="test">Chỉ ${esc(t.name)}</option></select></label><label class="fld"><span>Người thực hiện</span><input id="eo"></label></div>
+  <label class="fld" style="margin-top:10px"><span>Nội dung (vd: thay đèn halogen, bảo dưỡng 3 tháng, hiệu chuẩn bằng calibrator lô…)</span><textarea id="en" rows="3"></textarea></label>
+  <div class="chk" style="margin-top:10px"><label><input type="checkbox" id="er">Tính lại chuỗi quy tắc 2-2s / 4-1s / 10x từ sự kiện này</label></div>
+  <p class="muted" style="font-size:13px">Sự kiện hiện thành vạch đứng trên biểu đồ và nằm xen trong bảng kết quả. Sau sự kiện, chạy lại QC: app tự gợi ý lý do “Sau bảo trì / hiệu chuẩn…”.</p>`,()=>{
+    const ts=new Date($('#ed').value).getTime();if(isNaN(ts))return merr('Chọn ngày giờ');
+    S.events.push({id:uid(),deviceId:t.deviceId,testId:$('#es').value==='test'?t.id:null,ts,type:$('#et').value,op:$('#eo').value.trim(),note:$('#en').value.trim(),reset:$('#er').checked});
+    save();render();toast('Đã ghi sự kiện');
+  });
+  const sync=()=>{$('#er').checked=EVT[$('#et').value].reset};$('#et').onchange=sync;sync();
 }
 
 /* ---------- GitHub ---------- */
@@ -451,23 +548,43 @@ async function ghPull(c){
   if(!r.ok)throw new Error(r.status===404?'không thấy file/repo (404)':'HTTP '+r.status);
   return JSON.parse(await r.text());
 }
-async function ghPush(c){
+const setSync=v=>{const c=ghCfg();c.lastSync=v;localStorage.setItem(GH,JSON.stringify(c))};
+async function ghPush(c,force){
   const H={Accept:'application/vnd.github+json',Authorization:'Bearer '+c.token};
+  if(!force){
+    let remote=null;try{remote=await ghPull(c)}catch(e){}
+    if(remote&&((c.lastSync!=null&&(remote.updatedAt||0)>c.lastSync)||(c.lastSync==null&&(remote.results||[]).length))){
+      const er=new Error(c.lastSync==null?'Máy này chưa từng đồng bộ, nhưng trên GitHub đã có dữ liệu. Nên bấm “Tải từ GitHub” trước.':'Trên GitHub có dữ liệu mới hơn (máy khác vừa cập nhật). Nên bấm “Tải từ GitHub” trước.');
+      er.code='CONFLICT';throw er;
+    }
+  }
   const g=await fetch(ghUrl(c)+'?ref='+encodeURIComponent(c.branch),{headers:H});
   let sha;if(g.ok)sha=(await g.json()).sha;else if(g.status!==404)throw new Error('HTTP '+g.status);
   const body={message:'Cập nhật dữ liệu nội kiểm '+fmtDT(Date.now()),content:b64(JSON.stringify(S,null,1)),branch:c.branch};if(sha)body.sha=sha;
   const p=await fetch(ghUrl(c),{method:'PUT',headers:H,body:JSON.stringify(body)});
   if(!p.ok){let m='HTTP '+p.status;try{m=(await p.json()).message||m}catch(e){}throw new Error(m)}
+  setSync(S.updatedAt||0);
+}
+async function bootSync(){
+  const c=ghCfg();if(!c.repo||!c.token)return;
+  try{
+    const r=normalize(await ghPull(c)),last=c.lastSync==null?-1:c.lastSync,ru=r.updatedAt||0;
+    if(ru<=last)return;
+    const dirty=last<0?S.results.length>0:(S.updatedAt||0)>last;
+    if(dirty&&!confirm('Dữ liệu trên GitHub mới hơn, và máy này cũng có thay đổi chưa đẩy lên. Tải bản GitHub về? (thay đổi chưa đẩy ở máy này sẽ mất; hãy tải JSON sao lưu trước nếu cần)'))return;
+    S=r;setSync(ru);localStorage.setItem(LS,JSON.stringify(S));
+    UI.testId=S.tests.find(t=>t.id===UI.testId)?UI.testId:(S.tests[0]?.id||null);render();toast('Đã cập nhật dữ liệu mới từ GitHub');
+  }catch(e){}
 }
 
 /* ---------- xuất file ---------- */
 function dl(name,text,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)}
 function csv(testId){
   const q=v=>`"${String(v??'').replace(/"/g,'""')}"`;
-  const rows=[['Thiết bị','Xét nghiệm','Loại','Mức','Lô','Thời gian','Kết quả','Mean','SD','z / độ lệch bậc','Trạng thái','Quy tắc / ghi nhận','Người thực hiện','Ghi chú','Hành động khắc phục']];
+  const rows=[['Thiết bị','Xét nghiệm','Loại','Mức','Lô','Thời gian','Kết quả','Mean','SD','z / độ lệch bậc','Trạng thái','Quy tắc / ghi nhận','Lý do chạy QC','Người thực hiện','Ghi chú','Hành động khắc phục']];
   S.tests.filter(t=>!testId||t.id===testId).forEach(t=>{
     const {res,out}=evalTest(t);
-    res.forEach(r=>{const o=out[r.id]||{flags:[],status:'ok'};rows.push([D(t.deviceId)?.name,t.name,typeName[t.type],r.levelName,r.lot,fmtDT(r.ts),r.value,r.mean??'',r.sd??'',t.type==='quant'?fmt(o.z,2):o.dev,{ok:'Đạt',warn:'Cảnh báo',fail:'Vi phạm'}[o.status],o.flags.join('; '),r.op,r.note,r.action])});
+    res.forEach(r=>{const o=out[r.id]||{flags:[],status:'ok'};rows.push([D(t.deviceId)?.name,t.name,typeName[t.type],r.levelName,r.lot,fmtDT(r.ts),r.value,r.mean??'',r.sd??'',t.type==='quant'?fmt(o.z,2):o.dev,{ok:'Đạt',warn:'Cảnh báo',fail:'Vi phạm'}[o.status],o.flags.join('; '),r.reason||'Thường quy',r.op,r.note,r.action])});
   });
   dl('noi-kiem.csv','﻿'+rows.map(r=>r.map(q).join(',')).join('\r\n'),'text/csv;charset=utf-8');
 }
@@ -484,9 +601,12 @@ document.addEventListener('click',e=>{
   else if(a==='data')dataDialog();
   else if(a==='csv')csv(id);
   else if(a==='toggleAll'){UI.showAll=!UI.showAll;render()}
-  else if(a==='delTest'){const t=T(id);if(confirm(`Xóa xét nghiệm “${t.name}” và toàn bộ kết quả?`)){S.results=S.results.filter(r=>r.testId!==id);S.tests=S.tests.filter(x=>x.id!==id);UI.testId=null;save();render()}}
+  else if(a==='delTest'){const t=T(id);if(confirm(`Xóa xét nghiệm “${t.name}” và toàn bộ kết quả?`)){S.results=S.results.filter(r=>r.testId!==id);S.events=S.events.filter(e=>e.testId!==id);S.tests=S.tests.filter(x=>x.id!==id);UI.testId=null;save();render()}}
   else if(a==='delRes'){if(confirm('Xóa kết quả này?')){S.results=S.results.filter(r=>r.id!==id);save();render()}}
-  else if(a==='action'){const r=S.results.find(x=>x.id===id);const v=prompt('Hành động khắc phục:',r.action||'');if(v!==null){r.action=v.trim();save();render()}}
+  else if(a==='action')editAction(id);
+  else if(a==='newEvent')editEvent(id);
+  else if(a==='delEvt'){if(confirm('Xóa sự kiện này?')){S.events=S.events.filter(e=>e.id!==id);save();render()}}
+  else if(a==='advice'){const r=S.results.find(x=>x.id===id);showAdvice(b.dataset.flags?b.dataset.flags.split('||'):(r?evalTest(T(r.testId)).out[r.id].flags:[]))}
 });
 document.addEventListener('submit',e=>{if(e.target.id==='entryForm'){e.preventDefault();addRun(new FormData(e.target),e.target)}});
 document.addEventListener('change',e=>{if(e.target.id==='lastN'){UI.lastN=parseInt(e.target.value);renderMain()}});
@@ -498,6 +618,7 @@ document.addEventListener('change',e=>{if(e.target.id==='lastN'){UI.lastN=parseI
   }
   if(S.tests.length){UI.testId=S.tests[0].id;UI.deviceId=S.tests[0].deviceId}
   render();
+  bootSync();
 })();
 </script>
 </body>
