@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nội kiểm xét nghiệm</title>
+<style>
+:root{--bg:#f5f6f8;--card:#fff;--ink:#1c2430;--mute:#667085;--line:#e2e6ed;--accent:#1f66d6;--ok:#1a7f5a;--warn:#b86e00;--fail:#c62f3d;--band:#eaf3ff;--band2:#fff6e2;--grid:#9aa4b2;--soft:#f0f2f6}
+@media(prefers-color-scheme:dark){:root{--bg:#12161c;--card:#1a2029;--ink:#e6eaf0;--mute:#9aa4b2;--line:#2b3441;--accent:#6aa9ff;--ok:#4cc38a;--warn:#e8b04a;--fail:#ff6b78;--band:#1c2c44;--band2:#3a2f12;--grid:#5d6879;--soft:#222a35}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+header h1{font-size:17px;margin:0;flex:1}
+.app{display:grid;grid-template-columns:290px 1fr;gap:16px;padding:16px;max-width:1280px;margin:0 auto}
+@media(max-width:820px){.app{grid-template-columns:1fr;padding:12px}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
+.muted,small.muted{color:var(--mute)}
+button{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:6px 12px;border-radius:7px}
+button:hover{background:var(--soft)}
+button.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+button.pri:hover{filter:brightness(1.08)}
+button.danger{color:var(--fail)}
+button.sm{padding:2px 8px;font-size:13px}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:7px;padding:6px 8px;width:100%}
+textarea{resize:vertical}
+label.fld{display:flex;flex-direction:column;gap:3px;font-size:13px;color:var(--mute)}
+label.fld input,label.fld select{color:var(--ink);font-size:15px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.row>*{flex:1 1 140px}
+.side .dev{margin-bottom:14px}
+.side .dev h3{margin:0 0 4px;font-size:14px;display:flex;justify-content:space-between;align-items:center;gap:6px}
+.side .t{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;cursor:pointer}
+.side .t:hover{background:var(--soft)}
+.side .t.on{background:var(--band);font-weight:600}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--grid);flex:none}
+.dot.ok{background:var(--ok)}.dot.warn{background:var(--warn)}.dot.fail{background:var(--fail)}
+.badge{display:inline-block;font-size:12px;padding:1px 8px;border-radius:99px;border:1px solid var(--line);color:var(--mute);background:var(--soft)}
+.badge.ok{color:var(--ok)}.badge.warn{color:var(--warn)}.badge.fail{color:var(--fail)}
+.alert{border-left:4px solid var(--warn);background:var(--band2);padding:10px 12px;border-radius:7px;margin-bottom:14px}
+.alert.fail{border-color:var(--fail)}.alert.okk{border-color:var(--ok);background:var(--soft)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{font-size:12px;color:var(--mute);font-weight:600;white-space:nowrap}
+.scroll{overflow-x:auto}
+h2{font-size:16px;margin:0 0 8px}
+.head{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.head h2{font-size:20px;margin:0}
+.spacer{flex:1}
+svg.chart{width:100%;height:auto;display:block}
+svg .band{fill:var(--band)}svg .band2{fill:var(--band2)}
+svg .l0{stroke:var(--ink);stroke-width:1.4}
+svg .l1{stroke:var(--grid);stroke-width:1;stroke-dasharray:2 4}
+svg .l2{stroke:var(--warn);stroke-width:1;stroke-dasharray:6 4}
+svg .l3{stroke:var(--fail);stroke-width:1.2}
+svg .tk{fill:var(--mute);font-size:11px}
+svg .ln{fill:none;stroke:var(--accent);stroke-width:1.5;opacity:.8}
+svg .okp{fill:var(--accent)}svg .wp{fill:var(--warn)}svg .fp{fill:var(--fail)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--mute);margin:4px 0 8px}
+.legend i{display:inline-block;width:10px;height:10px;margin-right:4px;border-radius:50%;vertical-align:middle}
+dialog{border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);padding:0;width:min(720px,94vw);max-height:92vh}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+dialog .mh{padding:12px 16px;border-bottom:1px solid var(--line);font-weight:600}
+dialog .mb{padding:14px 16px;overflow:auto;max-height:68vh}
+dialog .mf{padding:10px 16px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end;align-items:center}
+.err{color:var(--fail);font-size:13px;flex:1}
+.chk{display:flex;gap:12px;flex-wrap:wrap;font-size:14px}
+.chk label{display:flex;gap:5px;align-items:center}.chk input{width:auto}
+#toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:99px;font-size:14px;display:none;z-index:20}
+.empty{text-align:center;padding:40px 16px;color:var(--mute)}
+</style>
+</head>
+<body>
+<header>
+  <h1>🧪 Nội kiểm xét nghiệm (IQC)</h1>
+  <button data-act="data">Dữ liệu / GitHub</button>
+</header>
+<div class="app">
+  <aside class="side card" id="side"></aside>
+  <main id="main"></main>
+</div>
+<dialog id="m"><div class="mh" id="mh"></div><div class="mb" id="mb"></div><div class="mf"><span class="err" id="me"></span><button id="mc">Đóng</button><button class="pri" id="ms">Lưu</button></div></dialog>
+<div id="toast"></div>
+<script>
+'use strict';
+const $=(s,r=document)=>r.querySelector(s);
+const uid=()=>Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-3);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const num=v=>{const x=parseFloat(String(v).trim().replace(',','.'));return isNaN(x)?NaN:x};
+const fmt=(x,d=2)=>(x==null||isNaN(x))?'–':Number(x).toFixed(d);
+const pad=n=>String(n).padStart(2,'0');
+const fmtDT=ts=>{const d=new Date(ts);return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`};
+const fmtD=ts=>{const d=new Date(ts);return `${pad(d.getDate())}/${pad(d.getMonth()+1)}`};
+const nowLocal=()=>{const d=new Date();return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`};
+const typeName={quant:'Định lượng',qual:'Định tính',semi:'Định tính có thang đo'};
+const defaultRules={r12:true,r13:true,r22:true,r4s:true,r41:true,r10x:true};
+const ruleNames={r12:'1-2s (cảnh báo)',r13:'1-3s',r22:'2-2s',r4s:'R-4s',r41:'4-1s',r10x:'10x'};
+const PALETTE=['#2f6fed','#d9731a','#1f9d6b','#8a4fd1','#0e9aa7','#c2417c'];
+const LS='iqc.v1',GH='iqc.gh';
+
+let S={version:1,devices:[],tests:[],results:[]};
+let UI={deviceId:null,testId:null,lastN:40,flash:null,showAll:false};
+const T=id=>S.tests.find(t=>t.id===id), D=id=>S.devices.find(d=>d.id===id);
+
+/* ---------- lưu trữ ---------- */
+function loadLocal(){try{const j=localStorage.getItem(LS);if(j){S=JSON.parse(j);return true}}catch(e){}return false}
+let pushTimer=null;
+function save(){S.updatedAt=Date.now();try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){toast('Không lưu được vào trình duyệt')}
+  const c=ghCfg();if(c.auto&&c.token&&c.repo){clearTimeout(pushTimer);pushTimer=setTimeout(()=>ghPush(c).then(()=>toast('Đã đẩy lên GitHub')).catch(e=>toast('Lỗi GitHub: '+e.message)),4000)}}
+function toast(msg){const t=$('#toast');t.textContent=msg;t.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(()=>t.style.display='none',3200)}
+function normalize(d){if(!d||!Array.isArray(d.devices)||!Array.isArray(d.tests)||!Array.isArray(d.results))throw new Error('File không đúng định dạng');return d}
+
+/* ---------- đánh giá quy tắc ---------- */
+function evalTest(t){
+  const res=S.results.filter(r=>r.testId===t.id).sort((a,b)=>a.ts-b.ts);
+  const out={};
+  if(t.type==='quant')evalQuant(t,res,out);else evalStep(t,res,out);
+  return{res,out};
+}
+function evalQuant(t,res,out){
+  const R={...defaultRules,...(t.rules||{})};
+  const groups={};
+  res.forEach(r=>{(groups[[r.levelId,r.lot||'',r.mean,r.sd].join('|')]??=[]).push(r)});
+  const addF=(r,f,sev)=>{const o=out[r.id];if(!o.flags.includes(f))o.flags.push(f);if(sev==='fail')o.status='fail';else if(o.status!=='fail')o.status='warn'};
+  Object.values(groups).forEach(list=>{
+    list.forEach((r,i)=>{
+      const z=(r.value-r.mean)/r.sd;
+      out[r.id]={z,flags:[],status:'ok'};
+      if(Math.abs(z)>3&&R.r13)addF(r,'1-3s','fail');
+      else if(Math.abs(z)>2&&R.r12)addF(r,'1-2s','warn');
+      if(R.r22&&i>=1){const zp=out[list[i-1].id].z;if(Math.abs(z)>2&&Math.abs(zp)>2&&Math.sign(z)===Math.sign(zp))addF(r,'2-2s','fail')}
+      if(R.r41&&i>=3){const zs=[0,1,2,3].map(k=>out[list[i-k].id].z);if(zs.every(v=>v>1)||zs.every(v=>v<-1))addF(r,'4-1s','fail')}
+      if(R.r10x&&i>=9){const zs=[...Array(10).keys()].map(k=>out[list[i-k].id].z);if(zs.every(v=>v>0)||zs.every(v=>v<0))addF(r,'10x','fail')}
+      const tea=t.tea;
+      if(tea&&tea.value>0&&r.mean!==0){
+        const err=tea.kind==='pct'?(r.value-r.mean)/r.mean*100:r.value-r.mean;
+        out[r.id].err=err;
+        if(Math.abs(err)>tea.value)addF(r,'Vượt TEa','fail');
+      }
+    });
+  });
+  const byRun={};
+  res.forEach(r=>{(byRun[r.run]??={})[r.levelId]=r});
+  Object.values(byRun).forEach(m=>{
+    const zs=Object.values(m).map(r=>({r,z:out[r.id].z}));
+    if(zs.length<2)return;
+    const hi=zs.reduce((a,b)=>b.z>a.z?b:a),lo=zs.reduce((a,b)=>b.z<a.z?b:a);
+    if(R.r4s&&hi.z>2&&lo.z<-2){addF(hi.r,'R-4s','fail');addF(lo.r,'R-4s','fail')}
+    if(R.r22)[zs.filter(x=>x.z>2),zs.filter(x=>x.z<-2)].forEach(g=>{if(g.length>=2)g.forEach(x=>addF(x.r,'2-2s (liên mức)','fail'))});
+  });
+}
+function evalStep(t,res,out){
+  const idx=v=>t.scale.indexOf(v);
+  const groups={};
+  res.forEach(r=>{(groups[[r.levelId,r.lot||'',r.expected,r.tol].join('|')]??=[]).push(r)});
+  Object.values(groups).forEach(list=>{
+    list.forEach((r,i)=>{
+      const dev=idx(r.value)-idx(r.expected),tol=r.tol||0;
+      const o=out[r.id]={dev,flags:[],status:'ok'};
+      if(Math.abs(dev)>tol){o.status='fail';o.flags.push(t.type==='qual'?'Sai kết quả':`Lệch ${dev>0?'+':''}${dev} bậc`)}
+      else if(tol>0&&Math.abs(dev)===tol){o.status='warn';o.flags.push('Sát giới hạn')}
+      if(i>=3){const ds=[0,1,2,3].map(k=>out[list[i-k].id].dev);
+        if(ds.every(v=>v>0)||ds.every(v=>v<0)){if(o.status==='ok')o.status='warn';o.flags.push('4 lần lệch cùng phía')}}
+    });
+  });
+}
+const isCur=(t,l,r)=>r.levelId===l.id&&(r.lot||'')===(l.lot||'')&&(t.type==='quant'?(r.mean===l.mean&&r.sd===l.sd):(r.expected===l.expected&&(r.tol||0)===(l.tol||0)));
+function testStatus(t){
+  const {res,out}=evalTest(t);if(!res.length)return'none';
+  let st='ok';
+  t.levels.forEach(l=>{const last=[...res].reverse().find(r=>r.levelId===l.id);if(last&&out[last.id]){const s=out[last.id].status;if(s==='fail')st='fail';else if(s==='warn'&&st!=='fail')st='warn'}});
+  return st;
+}
+
+/* ---------- biểu đồ SVG ---------- */
+function marker(x,y,st,title,color){
+  const sty=color&&st==='ok'?` style="fill:${color}"`:'';
+  let s;
+  if(st==='fail')s=`<rect x="${x-5}" y="${y-5}" width="10" height="10" class="fp"/>`;
+  else if(st==='warn')s=`<path d="M${x} ${y-6}L${x+6} ${y+5}L${x-6} ${y+5}Z" class="wp"/>`;
+  else s=`<circle cx="${x}" cy="${y}" r="4" class="okp"${sty}/>`;
+  return `<g>${s}<title>${esc(title)}</title></g>`;
+}
+function xTicks(items,X,y){
+  const n=items.length;if(!n)return'';
+  const step=Math.max(1,Math.ceil(n/9));let s='';
+  items.forEach((p,i)=>{if(i%step===0||i===n-1)s+=`<text x="${X(i)}" y="${y}" class="tk" text-anchor="middle">${fmtD(p.r.ts)}</text>`});
+  return s;
+}
+function legend(extra=''){return `<div class="legend"><span><i style="background:var(--accent)"></i>Đạt</span><span>▲ Cảnh báo</span><span>■ Vi phạm / ngoài giới hạn</span>${extra}</div>`}
+function lastN(arr){return UI.lastN>0?arr.slice(-UI.lastN):arr}
+
+function ljChart(level,pts,t){
+  const d=t.dec??2,n=pts.length,W=840,H=300,L=64,R=48,Tp=14,B=36;
+  const m=level.mean,s=level.sd;
+  let lo=m-3.6*s,hi=m+3.6*s;
+  pts.forEach(p=>{lo=Math.min(lo,p.r.value-.2*s);hi=Math.max(hi,p.r.value+.2*s)});
+  const X=i=>n<=1?L+(W-L-R)/2:L+(W-L-R)*i/(n-1),Y=v=>Tp+(H-Tp-B)*(hi-v)/(hi-lo);
+  let g=`<rect x="${L}" y="${Y(m+2*s)}" width="${W-L-R}" height="${Y(m-2*s)-Y(m+2*s)}" class="band"/>`;
+  [[3,'l3'],[2,'l2'],[1,'l1'],[0,'l0'],[-1,'l1'],[-2,'l2'],[-3,'l3']].forEach(([k,c])=>{
+    const y=Y(m+k*s);
+    g+=`<line x1="${L}" x2="${W-R}" y1="${y}" y2="${y}" class="${c}"/><text x="${L-6}" y="${y+4}" class="tk" text-anchor="end">${fmt(m+k*s,d)}</text><text x="${W-R+6}" y="${y+4}" class="tk">${k===0?'TB':(k>0?'+':'')+k+'SD'}</text>`;
+  });
+  if(n>1)g+=`<path class="ln" d="${pts.map((p,i)=>(i?'L':'M')+X(i)+' '+Y(p.r.value)).join('')}"/>`;
+  pts.forEach((p,i)=>{const z=p.o.z;g+=marker(X(i),Y(p.r.value),p.o.status,`${fmtDT(p.r.ts)} | ${fmt(p.r.value,d)} ${t.unit||''} | z=${fmt(z,2)}${p.o.flags.length?' | '+p.o.flags.join(', '):''}`)});
+  g+=xTicks(pts,X,H-12);
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Biểu đồ Levey-Jennings ${esc(level.name)}">${g}</svg>`;
+}
+function zChart(t,levelSeries){
+  const W=840,H=300,L=64,R=48,Tp=14,B=36;
+  const runs=[...new Set(levelSeries.flatMap(ls=>ls.pts.map(p=>p.r.run)))].sort().slice(UI.lastN>0?-UI.lastN:0);
+  const n=runs.length;if(!n)return'';
+  let lim=4;levelSeries.forEach(ls=>ls.pts.forEach(p=>{if(runs.includes(p.r.run))lim=Math.max(lim,Math.ceil(Math.abs(p.o.z)+.3))}));
+  const X=i=>n<=1?L+(W-L-R)/2:L+(W-L-R)*i/(n-1),Y=v=>Tp+(H-Tp-B)*(lim-v)/(2*lim);
+  let g=`<rect x="${L}" y="${Y(2)}" width="${W-L-R}" height="${Y(-2)-Y(2)}" class="band"/>`;
+  [[3,'l3'],[2,'l2'],[1,'l1'],[0,'l0'],[-1,'l1'],[-2,'l2'],[-3,'l3']].forEach(([k,c])=>{const y=Y(k);
+    g+=`<line x1="${L}" x2="${W-R}" y1="${y}" y2="${y}" class="${c}"/><text x="${L-6}" y="${y+4}" class="tk" text-anchor="end">${k>0?'+':''}${k}</text>`});
+  g+=`<text x="${W-R+6}" y="${Y(0)+4}" class="tk">z (SD)</text>`;
+  levelSeries.forEach((ls,li)=>{
+    const col=PALETTE[li%PALETTE.length];
+    const pp=ls.pts.filter(p=>runs.includes(p.r.run)).map(p=>({x:X(runs.indexOf(p.r.run)),y:Y(p.o.z),p}));
+    if(pp.length>1)g+=`<path fill="none" stroke="${col}" stroke-width="1.5" opacity=".8" d="${pp.map((q,i)=>(i?'L':'M')+q.x+' '+q.y).join('')}"/>`;
+    pp.forEach(q=>{g+=marker(q.x,q.y,q.p.o.status,`${ls.level.name} | ${fmtDT(q.p.r.ts)} | z=${fmt(q.p.o.z,2)}${q.p.o.flags.length?' | '+q.p.o.flags.join(', '):''}`,col)});
+  });
+  const dates=runs.map(r=>({r:{ts:new Date(r+'T12:00').getTime()}}));
+  g+=xTicks(dates,X,H-12);
+  const lg=levelSeries.map((ls,i)=>`<span><i style="background:${PALETTE[i%PALETTE.length]}"></i>${esc(ls.level.name)}</span>`).join('');
+  return legend(lg)+`<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Biểu đồ z-score nhiều mức">${g}</svg>`;
+}
+function stepChart(level,pts,t){
+  const sc=t.scale,rows=sc.length,rowH=34,W=840,L=90,R=20,Tp=12,B=34,H=Tp+B+rows*rowH,n=pts.length;
+  const X=i=>n<=1?L+(W-L-R)/2:L+(W-L-R)*i/(n-1),Y=k=>Tp+(rows-1-k+.5)*rowH;
+  const e=sc.indexOf(level.expected),tol=level.tol||0;
+  let g='';
+  for(let k=0;k<rows;k++){
+    const cls=k===e?'band':(Math.abs(k-e)<=tol?'band2':'');
+    if(cls)g+=`<rect x="${L}" y="${Y(k)-rowH/2}" width="${W-L-R}" height="${rowH}" class="${cls}"/>`;
+    g+=`<line x1="${L}" x2="${W-R}" y1="${Y(k)}" y2="${Y(k)}" class="l1"/><text x="${L-8}" y="${Y(k)+4}" class="tk" text-anchor="end" style="font-size:12px">${esc(sc[k])}</text>`;
+  }
+  const valid=pts.filter(p=>sc.indexOf(p.r.value)>=0);
+  const vn=valid.length,X2=i=>vn<=1?L+(W-L-R)/2:L+(W-L-R)*i/(vn-1);
+  if(vn>1)g+=`<path class="ln" d="${valid.map((p,i)=>(i?'L':'M')+X2(i)+' '+Y(sc.indexOf(p.r.value))).join('')}"/>`;
+  valid.forEach((p,i)=>{g+=marker(X2(i),Y(sc.indexOf(p.r.value)),p.o.status,`${fmtDT(p.r.ts)} | ${p.r.value} (mục tiêu: ${p.r.expected})${p.o.flags.length?' | '+p.o.flags.join(', '):''}`)});
+  g+=xTicks(valid,X2,H-10);
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Biểu đồ theo dõi ${esc(level.name)}">${g}</svg>`;
+}
+
+/* ---------- giao diện chính ---------- */
+function render(){renderSide();renderMain()}
+function renderSide(){
+  let h='';
+  S.devices.forEach(d=>{
+    h+=`<div class="dev"><h3><span>${esc(d.name)}</span><span><button class="sm" data-act="editDevice" data-id="${d.id}" title="Sửa thiết bị">✎</button> <button class="sm" data-act="newTest" data-id="${d.id}" title="Thêm xét nghiệm">＋</button></span></h3>`;
+    const ts=S.tests.filter(t=>t.deviceId===d.id);
+    if(!ts.length)h+=`<div class="muted" style="font-size:13px;padding:4px 8px">Chưa có xét nghiệm</div>`;
+    ts.forEach(t=>{h+=`<div class="t ${t.id===UI.testId?'on':''}" data-act="pick" data-id="${t.id}"><span class="dot ${testStatus(t)}"></span><span style="flex:1">${esc(t.name)}</span><small class="muted">${t.type==='quant'?'ĐL':t.type==='semi'?'ĐT-thang':'ĐT'}</small></div>`});
+    h+='</div>';
+  });
+  h+=`<button data-act="newDevice" style="width:100%">＋ Thêm thiết bị</button>`;
+  $('#side').innerHTML=h;
+}
+function renderMain(){
+  const t=T(UI.testId);
+  if(!t){
+    $('#main').innerHTML=`<div class="card empty"><h2>Bắt đầu</h2><p>${S.devices.length?'Chọn một xét nghiệm ở danh sách bên trái, hoặc bấm ＋ cạnh thiết bị để thêm xét nghiệm mới.':'Thêm thiết bị đầu tiên, sau đó khai báo các xét nghiệm và mức nội kiểm (mean, SD, TEa…).'}</p><p><button class="pri" data-act="${S.devices.length?'newTest':'newDevice'}">${S.devices.length?'＋ Thêm xét nghiệm':'＋ Thêm thiết bị'}</button></p></div>`;
+    return;
+  }
+  const dev=D(t.deviceId),d=t.dec??2,{res,out}=evalTest(t);
+  let h=`<div class="card"><div class="head"><h2>${esc(t.name)}</h2><span class="badge">${typeName[t.type]}</span><span class="muted">${esc(dev?.name||'')}${t.unit?' · '+esc(t.unit):''}${t.tea&&t.tea.value>0?` · TEa ${t.tea.value}${t.tea.kind==='pct'?'%':' '+esc(t.unit||'')}`:''}</span><span class="spacer"></span>
+  <button data-act="editTest" data-id="${t.id}">Khai báo</button><button data-act="csv" data-id="${t.id}">CSV</button><button class="danger" data-act="delTest" data-id="${t.id}">Xóa</button></div>${entryHTML(t)}</div>`;
+  if(UI.flash){h+=UI.flash;UI.flash=null}
+  else if(res.length){
+    const last=res[res.length-1].run;
+    const bad=res.filter(r=>r.run===last&&out[r.id]&&out[r.id].flags.length);
+    if(bad.length)h+=`<div class="alert ${bad.some(r=>out[r.id].status==='fail')?'fail':''}"><b>Lần chạy gần nhất (${last.split('-').reverse().join('/')}):</b> ${bad.map(r=>`${esc(r.levelName)}: ${esc(out[r.id].flags.join(', '))}`).join(' · ')}</div>`;
+  }
+  if(!t.levels.length)h+=`<div class="card muted">Chưa có mức QC nào — bấm “Khai báo” để thêm.</div>`;
+  else{
+    h+=`<div class="card"><div class="head"><h2>Biểu đồ theo dõi</h2><span class="spacer"></span><label class="fld" style="flex-direction:row;align-items:center;gap:6px">Hiển thị <select id="lastN" style="width:auto"><option value="20">20 điểm gần nhất</option><option value="40">40 điểm gần nhất</option><option value="90">90 điểm gần nhất</option><option value="0">Tất cả</option></select></label></div>`;
+    const series=t.levels.map(l=>({level:l,pts:lastN(res.filter(r=>isCur(t,l,r)&&out[r.id]).map(r=>({r,o:out[r.id]})))}));
+    if(t.type==='quant'){
+      if(series.length>=2){h+=`<h3 style="font-size:14px;margin:6px 0">Tất cả các mức (z-score)</h3>`+zChart(t,series)}
+      series.forEach(ls=>{
+        h+=`<h3 style="font-size:14px;margin:14px 0 2px">${esc(ls.level.name)} <small class="muted">${ls.level.lot?'lô '+esc(ls.level.lot)+' · ':''}TB ${fmt(ls.level.mean,d)} · SD ${fmt(ls.level.sd,d)} · CV ${fmt(ls.level.sd/ls.level.mean*100,1)}%</small></h3>`;
+        h+=ls.pts.length?legend()+ljChart(ls.level,ls.pts,t):`<div class="muted">Chưa có kết quả.</div>`;
+        const old=res.filter(r=>r.levelId===ls.level.id&&!isCur(t,ls.level,r)).length;
+        if(old)h+=`<small class="muted">${old} kết quả thuộc lô/thông số cũ — xem trong bảng bên dưới.</small>`;
+      });
+    }else{
+      series.forEach(ls=>{
+        h+=`<h3 style="font-size:14px;margin:14px 0 2px">${esc(ls.level.name)} <small class="muted">${ls.level.lot?'lô '+esc(ls.level.lot)+' · ':''}mục tiêu: ${esc(ls.level.expected)}${t.type==='semi'?` (±${ls.level.tol||0} bậc)`:''}</small></h3>`;
+        h+=ls.pts.length?legend()+stepChart(ls.level,ls.pts,t):`<div class="muted">Chưa có kết quả.</div>`;
+      });
+    }
+    h+='</div>';
+    h+=statsHTML(t,res,out);
+  }
+  h+=tableHTML(t,res,out);
+  $('#main').innerHTML=h;
+  const sel=$('#lastN');if(sel)sel.value=String(UI.lastN);
+}
+function entryHTML(t){
+  if(!t.levels.length)return'';
+  const d=t.dec??2;
+  const f=t.levels.map(l=>`<label class="fld"><span>${esc(l.name)}${l.lot?` <small>(lô ${esc(l.lot)})</small>`:''}</span>${t.type==='quant'?`<input name="v_${l.id}" inputmode="decimal" autocomplete="off" placeholder="${esc(t.unit||'giá trị')}">`:`<select name="v_${l.id}"><option value="">— không chạy —</option>${t.scale.map(s=>`<option>${esc(s)}</option>`).join('')}</select>`}<small>Mục tiêu: ${t.type==='quant'?fmt(l.mean,d)+' ± '+fmt(l.sd,d):esc(l.expected)+(t.type==='semi'?' (±'+(l.tol||0)+' bậc)':'')}</small></label>`).join('');
+  return `<form id="entryForm" data-test="${t.id}"><div class="row">${f}</div><div class="row" style="margin-top:10px"><label class="fld"><span>Ngày giờ</span><input type="datetime-local" name="dt" value="${nowLocal()}" required></label><label class="fld"><span>Người thực hiện</span><input name="op" autocomplete="off"></label><label class="fld" style="flex:2 1 220px"><span>Ghi chú</span><input name="note" autocomplete="off"></label><button class="pri" type="submit" style="flex:0 0 auto">Lưu kết quả</button></div></form>`;
+}
+function statsHTML(t,res,out){
+  if(t.type==='quant'){
+    const d=t.dec??2;let rows='';
+    t.levels.forEach(l=>{
+      const v=res.filter(r=>isCur(t,l,r)).map(r=>r.value),n=v.length;
+      if(!n){rows+=`<tr><td>${esc(l.name)}</td><td>0</td><td colspan="6" class="muted">—</td></tr>`;return}
+      const mean=v.reduce((a,b)=>a+b,0)/n,sd=n>1?Math.sqrt(v.reduce((a,b)=>a+(b-mean)**2,0)/(n-1)):NaN,cv=sd/mean*100,bias=(mean-l.mean)/l.mean*100;
+      const sig=t.tea&&t.tea.kind==='pct'&&t.tea.value>0&&n>1?(t.tea.value-Math.abs(bias))/cv:NaN;
+      rows+=`<tr><td>${esc(l.name)}</td><td>${n}</td><td>${fmt(l.mean,d)}</td><td>${fmt(mean,d)}</td><td>${fmt(sd,d)}</td><td>${fmt(cv,1)}%</td><td>${fmt(bias,1)}%</td><td>${fmt(sig,1)}</td></tr>`;
+    });
+    return `<div class="card"><h2>Thống kê (lô hiện tại)</h2><div class="scroll"><table><tr><th>Mức</th><th>n</th><th>TB mục tiêu</th><th>TB thực tế</th><th>SD thực tế</th><th>CV%</th><th>Bias%</th><th>Sigma</th></tr>${rows}</table></div><small class="muted">Sigma = (TEa% − |Bias%|) / CV%, chỉ tính khi TEa khai báo theo %.</small></div>`;
+  }
+  let rows='';
+  t.levels.forEach(l=>{
+    const cur=res.filter(r=>isCur(t,l,r)&&out[r.id]),n=cur.length,ok=cur.filter(r=>out[r.id].status!=='fail').length;
+    rows+=`<tr><td>${esc(l.name)}</td><td>${esc(l.expected)}</td><td>${n}</td><td>${n?fmt(ok/n*100,1)+'%':'–'}</td><td>${cur.filter(r=>out[r.id].status==='fail').length}</td></tr>`;
+  });
+  return `<div class="card"><h2>Thống kê (lô hiện tại)</h2><div class="scroll"><table><tr><th>Mức</th><th>Mục tiêu</th><th>n</th><th>Tỷ lệ đạt</th><th>Không đạt</th></tr>${rows}</table></div></div>`;
+}
+function tableHTML(t,res,out){
+  const d=t.dec??2,list=[...res].reverse(),shown=UI.showAll?list:list.slice(0,40);
+  const rows=shown.map(r=>{const o=out[r.id]||{flags:[],status:'ok'};
+    const dv=t.type==='quant'?`${fmt(r.value,d)} <small class="muted">z ${fmt(o.z,2)}</small>`:`${esc(r.value)} <small class="muted">${t.type==='semi'?'lệch '+(o.dev>0?'+':'')+o.dev:''}</small>`;
+    const stl={ok:'Đạt',warn:'Cảnh báo',fail:'Vi phạm'}[o.status];
+    return `<tr><td>${fmtDT(r.ts)}</td><td>${esc(r.levelName)}${r.lot?`<br><small class="muted">lô ${esc(r.lot)}</small>`:''}</td><td>${dv}</td><td><span class="badge ${o.status}">${stl}</span> ${esc(o.flags.join(', '))}</td><td>${esc(r.op||'')}</td><td>${esc(r.note||'')}${r.action?`<br><small><b>Khắc phục:</b> ${esc(r.action)}</small>`:''}</td><td style="white-space:nowrap">${o.status!=='ok'?`<button class="sm" data-act="action" data-id="${r.id}" title="Ghi hành động khắc phục">⚑</button> `:''}<button class="sm danger" data-act="delRes" data-id="${r.id}" title="Xóa">✕</button></td></tr>`}).join('');
+  return `<div class="card"><h2>Kết quả đã nhập (${res.length})</h2>${res.length?`<div class="scroll"><table><tr><th>Thời gian</th><th>Mức</th><th>Kết quả</th><th>Đánh giá</th><th>Người TH</th><th>Ghi chú</th><th></th></tr>${rows}</table></div>${list.length>40?`<p><button class="sm" data-act="toggleAll">${UI.showAll?'Thu gọn':'Xem tất cả'}</button></p>`:''}`:'<div class="muted">Chưa có dữ liệu.</div>'}</div>`;
+}
+
+/* ---------- nhập kết quả ---------- */
+function addRun(fd,form){
+  const t=T(form.dataset.test),dtv=fd.get('dt');
+  if(!dtv){toast('Chưa chọn ngày giờ');return}
+  const ts=new Date(dtv).getTime(),run=dtv.slice(0,10),added=[];
+  for(const l of t.levels){
+    const raw=fd.get('v_'+l.id);if(raw==null||String(raw).trim()==='')continue;
+    let value=raw;
+    if(t.type==='quant'){value=num(raw);if(isNaN(value)){toast(`Giá trị “${raw}” của ${l.name} không hợp lệ`);return}}
+    added.push({id:uid(),testId:t.id,levelId:l.id,levelName:l.name,run,ts,value,lot:l.lot||'',mean:t.type==='quant'?l.mean:undefined,sd:t.type==='quant'?l.sd:undefined,expected:t.type!=='quant'?l.expected:undefined,tol:t.type!=='quant'?(l.tol||0):undefined,op:fd.get('op')||'',note:fd.get('note')||'',action:''});
+  }
+  if(!added.length){toast('Chưa nhập kết quả nào');return}
+  S.results.push(...added);save();
+  const {out}=evalTest(t),ids=new Set(added.map(r=>r.id));
+  const flagged=added.filter(r=>out[r.id].flags.length);
+  UI.flash=flagged.length?`<div class="alert ${flagged.some(r=>out[r.id].status==='fail')?'fail':''}"><b>Vừa lưu — cần chú ý:</b> ${flagged.map(r=>`${esc(r.levelName)}: ${esc(out[r.id].flags.join(', '))}`).join(' · ')}<br><small>Bấm ⚑ ở bảng bên dưới để ghi hành động khắc phục.</small></div>`:`<div class="alert okk"><b>Đã lưu ${added.length} kết quả — tất cả đạt.</b></div>`;
+  render();
+}
+
+/* ---------- hộp thoại ---------- */
+function modal(title,body,onSave,opts={}){
+  const m=$('#m');$('#mh').textContent=title;$('#mb').innerHTML=body;$('#me').textContent='';
+  $('#ms').style.display=onSave?'':'none';$('#mc').textContent=onSave?'Hủy':'Đóng';
+  $('#ms').textContent=opts.saveLabel||'Lưu';
+  modal.save=onSave;if(!m.open)m.showModal();
+}
+$('#mc').onclick=()=>$('#m').close();
+$('#ms').onclick=async()=>{try{const r=await modal.save();if(r!==false)$('#m').close()}catch(e){$('#me').textContent=e.message}};
+const merr=msg=>{$('#me').textContent=msg;return false};
+
+function editDevice(id){
+  const d=id?{...D(id)}:{id:uid(),name:'',model:'',serial:'',location:''};
+  modal(id?'Sửa thiết bị':'Thêm thiết bị',`<div class="row"><label class="fld"><span>Tên thiết bị *</span><input id="dn" value="${esc(d.name)}"></label><label class="fld"><span>Model</span><input id="dm" value="${esc(d.model)}"></label></div><div class="row" style="margin-top:10px"><label class="fld"><span>Số serial</span><input id="ds" value="${esc(d.serial)}"></label><label class="fld"><span>Vị trí / khoa</span><input id="dl" value="${esc(d.location)}"></label></div>${id?`<p><button class="danger" id="dd">Xóa thiết bị này</button></p>`:''}`,()=>{
+    d.name=$('#dn').value.trim();if(!d.name)return merr('Nhập tên thiết bị');
+    d.model=$('#dm').value.trim();d.serial=$('#ds').value.trim();d.location=$('#dl').value.trim();
+    if(id)Object.assign(D(id),d);else{S.devices.push(d);UI.deviceId=d.id}
+    save();render();
+  });
+  const b=$('#dd');if(b)b.onclick=()=>{
+    const n=S.tests.filter(t=>t.deviceId===id).length;
+    if(!confirm(`Xóa thiết bị “${d.name}” cùng ${n} xét nghiệm và toàn bộ kết quả của chúng?`))return;
+    const ids=new Set(S.tests.filter(t=>t.deviceId===id).map(t=>t.id));
+    S.results=S.results.filter(r=>!ids.has(r.testId));S.tests=S.tests.filter(t=>t.deviceId!==id);S.devices=S.devices.filter(x=>x.id!==id);
+    if(ids.has(UI.testId))UI.testId=null;save();render();$('#m').close();
+  };
+}
+
+function editTest(id,deviceId){
+  const t=id?structuredClone(T(id)):{id:uid(),deviceId:deviceId||UI.deviceId||S.devices[0]?.id,name:'',type:'quant',unit:'',dec:2,tea:{kind:'pct',value:''},rules:{...defaultRules},scale:['Âm tính','Dương tính'],levels:[{id:uid(),name:'Mức 1',lot:'',mean:'',sd:'',expected:'',tol:0}]};
+  const hasRes=id&&S.results.some(r=>r.testId===id);
+  const readForm=()=>{
+    t.deviceId=$('#fd').value;t.name=$('#fn').value;t.type=$('#ft').value;
+    if(t.type==='quant'){t.unit=$('#fu').value;t.dec=parseInt($('#fdec').value)||0;t.tea={kind:$('#fk').value,value:$('#fv').value};
+      t.rules={};Object.keys(defaultRules).forEach(k=>t.rules[k]=$('#r_'+k).checked)}
+    else{t.scale=$('#fs').value.split(',').map(s=>s.trim()).filter(Boolean);t.scale=[...new Set(t.scale)]}
+    t.levels.forEach((l,i)=>{l.name=$('#ln'+i).value;l.lot=$('#ll'+i).value;
+      if(t.type==='quant'){l.mean=$('#lm'+i).value;l.sd=$('#lsd'+i).value}
+      else{l.expected=$('#le'+i).value;if(t.type==='semi')l.tol=$('#lt'+i).value}});
+  };
+  const draw=()=>{
+    const q=t.type==='quant';
+    const lv=t.levels.map((l,i)=>`<tr><td><input id="ln${i}" value="${esc(l.name)}"></td><td><input id="ll${i}" value="${esc(l.lot)}" placeholder="tuỳ chọn"></td>${q?`<td><input id="lm${i}" inputmode="decimal" value="${esc(l.mean)}"></td><td><input id="lsd${i}" inputmode="decimal" value="${esc(l.sd)}"></td>`:`<td><select id="le${i}">${t.scale.map(s=>`<option ${s===l.expected?'selected':''}>${esc(s)}</option>`).join('')}</select></td>${t.type==='semi'?`<td><input id="lt${i}" inputmode="numeric" value="${esc(l.tol??0)}" style="width:70px"></td>`:''}`}<td><button class="sm danger" data-del="${i}" type="button">✕</button></td></tr>`).join('');
+    $('#mb').innerHTML=`<div class="row"><label class="fld"><span>Thiết bị *</span><select id="fd">${S.devices.map(d=>`<option value="${d.id}" ${d.id===t.deviceId?'selected':''}>${esc(d.name)}</option>`).join('')}</select></label><label class="fld" style="flex:2 1 220px"><span>Tên xét nghiệm *</span><input id="fn" value="${esc(t.name)}"></label><label class="fld"><span>Loại</span><select id="ft" ${hasRes?'disabled':''}>${Object.entries(typeName).map(([k,v])=>`<option value="${k}" ${k===t.type?'selected':''}>${v}</option>`).join('')}</select></label></div>
+    ${q?`<div class="row" style="margin-top:10px"><label class="fld"><span>Đơn vị</span><input id="fu" value="${esc(t.unit)}" placeholder="mg/dL"></label><label class="fld"><span>Số chữ số thập phân</span><input id="fdec" inputmode="numeric" value="${esc(t.dec)}"></label><label class="fld"><span>TEa (nếu có)</span><div style="display:flex;gap:6px"><input id="fv" inputmode="decimal" value="${esc(t.tea?.value)}" placeholder="vd 10"><select id="fk" style="width:90px"><option value="pct" ${t.tea?.kind==='pct'?'selected':''}>%</option><option value="abs" ${t.tea?.kind==='abs'?'selected':''}>đơn vị</option></select></div></label></div>
+    <p style="margin:12px 0 4px;font-size:13px" class="muted">Quy tắc Westgard áp dụng</p><div class="chk">${Object.entries(ruleNames).map(([k,v])=>`<label><input type="checkbox" id="r_${k}" ${t.rules[k]!==false?'checked':''}>${v}</label>`).join('')}</div>`
+    :`<label class="fld" style="margin-top:10px"><span>Thang kết quả, sắp xếp từ thấp đến cao, cách nhau bằng dấu phẩy</span><input id="fs" value="${esc(t.scale.join(', '))}" placeholder="Âm tính, ±, 1+, 2+, 3+"></label>`}
+    <p style="margin:14px 0 4px;font-size:13px" class="muted">Các mức nội kiểm</p><div class="scroll"><table><tr><th>Tên mức</th><th>Số lô</th>${q?'<th>Mean</th><th>SD</th>':`<th>Kết quả mong đợi</th>${t.type==='semi'?'<th>Sai lệch cho phép (bậc)</th>':''}`}<th></th></tr>${lv}</table></div><p><button type="button" id="addLv" class="sm">＋ Thêm mức</button></p>${id&&q?'<small class="muted">Đổi mean/SD hoặc số lô sẽ mở một chuỗi biểu đồ mới; kết quả cũ vẫn được giữ nguyên với thông số lúc nhập.</small>':''}`;
+    $('#ft').onchange=()=>{readForm();if(t.type!=='quant'&&!t.scale.length)t.scale=['Âm tính','Dương tính'];t.levels.forEach(l=>{if(t.type!=='quant'&&!t.scale.includes(l.expected))l.expected=t.scale[0]});draw()};
+    const fs=$('#fs');if(fs)fs.onchange=()=>{readForm();t.levels.forEach(l=>{if(!t.scale.includes(l.expected))l.expected=t.scale[0]});draw()};
+    $('#addLv').onclick=()=>{readForm();t.levels.push({id:uid(),name:'Mức '+(t.levels.length+1),lot:'',mean:'',sd:'',expected:t.scale[0]||'',tol:0});draw()};
+    $('#mb').querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{readForm();t.levels.splice(+b.dataset.del,1);draw()});
+  };
+  if(!S.devices.length){toast('Hãy thêm thiết bị trước');return}
+  modal(id?'Khai báo xét nghiệm':'Thêm xét nghiệm','',()=>{
+    readForm();
+    t.name=t.name.trim();if(!t.name)return merr('Nhập tên xét nghiệm');
+    if(!t.levels.length)return merr('Cần ít nhất một mức nội kiểm');
+    for(const l of t.levels){
+      l.name=l.name.trim();l.lot=l.lot.trim();if(!l.name)return merr('Mỗi mức cần có tên');
+      if(t.type==='quant'){const m=num(l.mean),s=num(l.sd);if(isNaN(m))return merr(`Mean của “${l.name}” không hợp lệ`);if(isNaN(s)||s<=0)return merr(`SD của “${l.name}” phải > 0`);l.mean=m;l.sd=s;delete l.expected;delete l.tol}
+      else{if(t.scale.length<2)return merr('Thang kết quả cần ít nhất 2 giá trị');if(!t.scale.includes(l.expected))return merr(`Chọn kết quả mong đợi cho “${l.name}”`);
+        l.tol=t.type==='semi'?Math.max(0,parseInt(l.tol)||0):0;delete l.mean;delete l.sd}
+    }
+    if(t.type==='quant'){const v=num(t.tea.value);t.tea={kind:t.tea.kind,value:isNaN(v)?0:v};delete t.scale}else{delete t.unit;delete t.tea;delete t.rules}
+    if(id){S.tests[S.tests.findIndex(x=>x.id===id)]=t}else S.tests.push(t);
+    UI.testId=t.id;UI.deviceId=t.deviceId;save();render();
+  });
+  draw();
+}
+
+function dataDialog(){
+  const c=ghCfg();
+  modal('Dữ liệu & đồng bộ GitHub',`<h2>Sao lưu</h2><div class="row"><button id="bExp">Tải xuống JSON</button><button id="bImp">Nạp từ file JSON…</button><button id="bCsv">Xuất tất cả CSV</button></div><input type="file" id="fImp" accept="application/json,.json" style="display:none">
+  <h2 style="margin-top:18px">Đồng bộ GitHub</h2><p class="muted" style="font-size:13px;margin-top:0">Dữ liệu được ghi vào một file JSON trong repo của bạn. Token chỉ lưu trong trình duyệt này. Nên dùng <b>fine-grained token</b> chỉ cấp quyền <i>Contents: Read and write</i> cho đúng repo này.</p>
+  <div class="row"><label class="fld"><span>Repo (chủ/tên)</span><input id="gr" value="${esc(c.repo||'')}" placeholder="vtk-vikki/iqc-data"></label><label class="fld"><span>Nhánh</span><input id="gb" value="${esc(c.branch||'main')}"></label><label class="fld"><span>Đường dẫn file</span><input id="gp" value="${esc(c.path||'data.json')}"></label></div>
+  <label class="fld" style="margin-top:10px"><span>Personal access token</span><input id="gt" type="password" value="${esc(c.token||'')}" autocomplete="off"></label>
+  <div class="chk" style="margin:10px 0"><label><input type="checkbox" id="ga" ${c.auto?'checked':''}>Tự động đẩy lên GitHub sau mỗi lần lưu</label></div>
+  <div class="row"><button id="gPush" class="pri">⬆ Đẩy lên GitHub</button><button id="gPull">⬇ Tải từ GitHub</button></div>
+  <h2 style="margin-top:18px">Nguy hiểm</h2><button class="danger" id="bClr">Xóa toàn bộ dữ liệu trong trình duyệt</button>`,null);
+  const rd=()=>{const o={repo:$('#gr').value.trim(),branch:$('#gb').value.trim()||'main',path:$('#gp').value.trim()||'data.json',token:$('#gt').value.trim(),auto:$('#ga').checked};localStorage.setItem(GH,JSON.stringify(o));return o};
+  $('#bExp').onclick=()=>dl('iqc-data.json',JSON.stringify(S,null,1),'application/json');
+  $('#bCsv').onclick=()=>csv(null);
+  $('#bImp').onclick=()=>$('#fImp').click();
+  $('#fImp').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const d=normalize(JSON.parse(await f.text()));if(!confirm('Thay toàn bộ dữ liệu hiện tại bằng nội dung file này?'))return;S=d;UI.testId=null;save();render();$('#m').close();toast('Đã nạp dữ liệu')}catch(err){toast('Lỗi: '+err.message)}};
+  $('#gPush').onclick=async()=>{const c=rd();if(!c.repo||!c.token)return toast('Cần nhập repo và token');toast('Đang đẩy…');try{await ghPush(c);toast('Đã đẩy lên GitHub')}catch(e){toast('Lỗi GitHub: '+e.message)}};
+  $('#gPull').onclick=async()=>{const c=rd();if(!c.repo)return toast('Cần nhập repo');if(!confirm('Thay dữ liệu hiện tại bằng bản trên GitHub?'))return;toast('Đang tải…');try{S=normalize(await ghPull(c));UI.testId=null;save();render();$('#m').close();toast('Đã tải từ GitHub')}catch(e){toast('Lỗi GitHub: '+e.message)}};
+  $('#ga').onchange=rd;
+  $('#bClr').onclick=()=>{if(confirm('Xóa TOÀN BỘ thiết bị, xét nghiệm, kết quả trong trình duyệt này? (không ảnh hưởng bản trên GitHub)')){S={version:1,devices:[],tests:[],results:[]};UI.testId=null;save();render();$('#m').close()}};
+}
+
+/* ---------- GitHub ---------- */
+const ghCfg=()=>{try{return JSON.parse(localStorage.getItem(GH)||'{}')}catch(e){return{}}};
+const b64=s=>btoa(unescape(encodeURIComponent(s)));
+const ghUrl=c=>`https://api.github.com/repos/${c.repo}/contents/${c.path.split('/').map(encodeURIComponent).join('/')}`;
+async function ghPull(c){
+  const r=await fetch(ghUrl(c)+'?ref='+encodeURIComponent(c.branch),{headers:{Accept:'application/vnd.github.raw+json',...(c.token?{Authorization:'Bearer '+c.token}:{})}});
+  if(!r.ok)throw new Error(r.status===404?'không thấy file/repo (404)':'HTTP '+r.status);
+  return JSON.parse(await r.text());
+}
+async function ghPush(c){
+  const H={Accept:'application/vnd.github+json',Authorization:'Bearer '+c.token};
+  const g=await fetch(ghUrl(c)+'?ref='+encodeURIComponent(c.branch),{headers:H});
+  let sha;if(g.ok)sha=(await g.json()).sha;else if(g.status!==404)throw new Error('HTTP '+g.status);
+  const body={message:'Cập nhật dữ liệu nội kiểm '+fmtDT(Date.now()),content:b64(JSON.stringify(S,null,1)),branch:c.branch};if(sha)body.sha=sha;
+  const p=await fetch(ghUrl(c),{method:'PUT',headers:H,body:JSON.stringify(body)});
+  if(!p.ok){let m='HTTP '+p.status;try{m=(await p.json()).message||m}catch(e){}throw new Error(m)}
+}
+
+/* ---------- xuất file ---------- */
+function dl(name,text,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)}
+function csv(testId){
+  const q=v=>`"${String(v??'').replace(/"/g,'""')}"`;
+  const rows=[['Thiết bị','Xét nghiệm','Loại','Mức','Lô','Thời gian','Kết quả','Mean','SD','z / độ lệch bậc','Trạng thái','Quy tắc / ghi nhận','Người thực hiện','Ghi chú','Hành động khắc phục']];
+  S.tests.filter(t=>!testId||t.id===testId).forEach(t=>{
+    const {res,out}=evalTest(t);
+    res.forEach(r=>{const o=out[r.id]||{flags:[],status:'ok'};rows.push([D(t.deviceId)?.name,t.name,typeName[t.type],r.levelName,r.lot,fmtDT(r.ts),r.value,r.mean??'',r.sd??'',t.type==='quant'?fmt(o.z,2):o.dev,{ok:'Đạt',warn:'Cảnh báo',fail:'Vi phạm'}[o.status],o.flags.join('; '),r.op,r.note,r.action])});
+  });
+  dl('noi-kiem.csv','﻿'+rows.map(r=>r.map(q).join(',')).join('\r\n'),'text/csv;charset=utf-8');
+}
+
+/* ---------- sự kiện ---------- */
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-act]');if(!b)return;
+  const a=b.dataset.act,id=b.dataset.id;
+  if(a==='pick'){UI.testId=id;UI.deviceId=T(id).deviceId;UI.showAll=false;render()}
+  else if(a==='newDevice')editDevice();
+  else if(a==='editDevice')editDevice(id);
+  else if(a==='newTest')editTest(null,id);
+  else if(a==='editTest')editTest(id);
+  else if(a==='data')dataDialog();
+  else if(a==='csv')csv(id);
+  else if(a==='toggleAll'){UI.showAll=!UI.showAll;render()}
+  else if(a==='delTest'){const t=T(id);if(confirm(`Xóa xét nghiệm “${t.name}” và toàn bộ kết quả?`)){S.results=S.results.filter(r=>r.testId!==id);S.tests=S.tests.filter(x=>x.id!==id);UI.testId=null;save();render()}}
+  else if(a==='delRes'){if(confirm('Xóa kết quả này?')){S.results=S.results.filter(r=>r.id!==id);save();render()}}
+  else if(a==='action'){const r=S.results.find(x=>x.id===id);const v=prompt('Hành động khắc phục:',r.action||'');if(v!==null){r.action=v.trim();save();render()}}
+});
+document.addEventListener('submit',e=>{if(e.target.id==='entryForm'){e.preventDefault();addRun(new FormData(e.target),e.target)}});
+document.addEventListener('change',e=>{if(e.target.id==='lastN'){UI.lastN=parseInt(e.target.value);renderMain()}});
+
+/* ---------- khởi động ---------- */
+(async()=>{
+  if(!loadLocal()){
+    try{const r=await fetch('data.json',{cache:'no-store'});if(r.ok){S=normalize(await r.json());localStorage.setItem(LS,JSON.stringify(S))}}catch(e){}
+  }
+  if(S.tests.length){UI.testId=S.tests[0].id;UI.deviceId=S.tests[0].deviceId}
+  render();
+})();
+</script>
+</body>
+</html>
