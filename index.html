@@ -72,6 +72,9 @@ dialog .mf{padding:10px 16px;border-top:1px solid var(--line);display:flex;gap:8
 #rep .foot{border-top:1px solid #ccc;margin-top:24px;padding:8px 0 0;color:#555}
 .menu{display:none}
 .closemenu{display:none}
+.notes{font-size:13px;margin:0 0 12px;padding:8px 10px;border:1px solid var(--line);border-left:4px solid var(--ev);border-radius:8px;display:grid;gap:3px}
+.notes .nc{display:inline-block;min-width:26px;text-align:center;font-weight:700;color:var(--ev)}
+#rep .notes{border-color:#ccc;border-left-color:#7a4fd1}
 .vctl{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .vctl input[type=date]{min-width:0}
 .ic{display:none}
@@ -178,7 +181,7 @@ const ruleNames={r12:'1-2s (cảnh báo)',r13:'1-3s',r22:'2-2s',r4s:'R-4s',r41:'
 const MOB=()=>!!(window.matchMedia&&matchMedia('(max-width:820px)').matches);
 const PALETTE=['#2f6fed','#d9731a','#1f9d6b','#8a4fd1','#0e9aa7','#c2417c'];
 const LS='iqc.v1',GH='iqc.gh';
-const EVT={maint:{n:'Bảo trì / bảo dưỡng',c:'BT',reset:false},calib:{n:'Hiệu chuẩn',c:'HC',reset:true},service:{n:'Sửa chữa / thay linh kiện',c:'SC',reset:true},reagent:{n:'Đổi lô thuốc thử',c:'TT',reset:true},qclot:{n:'Đổi lô vật liệu QC',c:'LQ',reset:true},other:{n:'Sự kiện khác',c:'•',reset:false}};
+const EVT={maint:{n:'Bảo trì / bảo dưỡng',c:'BT',reset:false},calib:{n:'Hiệu chuẩn',c:'HC',reset:true},service:{n:'Sửa chữa / thay linh kiện',c:'SC',reset:true},reagent:{n:'Đổi lô thuốc thử',c:'TT',reset:true},qclot:{n:'Đổi lô vật liệu QC',c:'LQ',reset:true},param:{n:'Thay đổi thông số',c:'TS',reset:false},other:{n:'Sự kiện khác',c:'•',reset:false}};
 const REASONS=['Thường quy','Chạy lại sau khắc phục','Sau bảo trì','Sau hiệu chuẩn','Sau sửa chữa / thay linh kiện','Đổi lô thuốc thử','Đổi lô vật liệu QC'];
 const evFor=t=>S.events.filter(e=>e.deviceId===t.deviceId&&(!e.testId||e.testId===t.id)).sort((a,b)=>a.ts-b.ts);
 const ADV={
@@ -308,7 +311,7 @@ function xTicks(items,X,y){
   items.forEach((p,i)=>{if(i%step===0||i===n-1)s+=`<text x="${X(i)}" y="${y}" class="tk" text-anchor="${i===n-1&&n>1?'end':'middle'}">${fmtD(p.r.ts)}</text>`});
   return s;
 }
-function legend(extra='',sec=false){return `<div class="legend${sec?' sec':''}"><span><i style="background:var(--accent)"></i>Đạt</span><span>▲ Cảnh báo</span><span>■ Vi phạm / ngoài giới hạn</span>${extra}${S.events.length?'<span style="color:var(--ev)">┆ Sự kiện thiết bị (BT bảo trì · HC hiệu chuẩn · SC sửa chữa · TT thuốc thử · LQ lô QC)</span>':''}</div>`}
+function legend(extra='',sec=false){return `<div class="legend${sec?' sec':''}"><span><i style="background:var(--accent)"></i>Đạt</span><span>▲ Cảnh báo</span><span>■ Vi phạm / ngoài giới hạn</span>${extra}${S.events.length?'<span style="color:var(--ev)">┆ Sự kiện thiết bị (BT bảo trì · HC hiệu chuẩn · SC sửa chữa · TT thuốc thử · LQ lô QC · TS đổi thông số)</span>':''}</div>`}
 const VIEW_OPTS=[['n20','20 điểm gần nhất'],['n40','40 điểm gần nhất'],['n90','90 điểm gần nhất'],['n0','Tất cả'],['today','Hôm nay'],['7','7 ngày gần nhất'],['30','30 ngày gần nhất'],['month','Tháng này'],['prev','Tháng trước'],['day','Một ngày…'],['custom','Khoảng ngày…']];
 const dayStart=s=>{const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(s||'');return m?new Date(+m[1],+m[2]-1,+m[3]).getTime():NaN};
 const addDays=(s,n)=>{const t=dayStart(s);return isNaN(t)?s:ymd(new Date(new Date(t).getFullYear(),new Date(t).getMonth(),new Date(t).getDate()+n).getTime())};
@@ -349,19 +352,57 @@ function evLines(t,ts,X,y1,y2,xmax){
   });
   return s;
 }
+function describeParams(t,a,b){
+  const p=[],f=v=>v==null||v===''?'–':v;
+  if(t.type==='quant'){if(a.mean!==b.mean)p.push(`Mean ${a.mean} → ${b.mean}`);if(a.sd!==b.sd)p.push(`SD ${a.sd} → ${b.sd}`)}
+  else{if(a.expected!==b.expected)p.push(`mong đợi ${a.expected} → ${b.expected}`);if((a.tol||0)!==(b.tol||0))p.push(`sai lệch ${a.tol||0} → ${b.tol||0} bậc`)}
+  if((a.lot||'')!==(b.lot||''))p.push(`lô ${f(a.lot)} → ${f(b.lot)}`);
+  return p.join(', ');
+}
+function segInfo(t,pts){
+  const segs=[],evs=evFor(t).filter(e=>e.type==='param');
+  pts.forEach((p,i)=>{
+    const r=p.r,k=t.type==='quant'?[r.mean,r.sd,r.lot||''].join('|'):[r.expected,r.tol||0,r.lot||''].join('|'),s=segs[segs.length-1];
+    if(s&&s.k===k)s.i1=i;else segs.push({k,i0:i,i1:i,r});
+  });
+  segs.forEach((s,si)=>{
+    if(!si)return;
+    const a=pts[segs[si-1].i1].r,b=pts[s.i0].r;
+    s.cov=evs.some(e=>e.ts>a.ts&&e.ts<=b.ts);
+    s.text=describeParams(t,a,b);
+  });
+  return segs;
+}
+function pendingChange(t,level,pts,segs){
+  if(!pts.length||level.mean===undefined&&level.expected===undefined)return'';
+  const last=pts[pts.length-1].r;
+  if(evFor(t).some(e=>e.type==='param'&&e.ts>last.ts))return'';
+  return describeParams(t,last,level);
+}
+const tsMark=(x,y1,y2,tip)=>`<g><line x1="${x}" x2="${x}" y1="${y1}" y2="${y2}" class="evl"/><text x="${x}" y="${y1-2}" class="evt" text-anchor="middle">TS</text><title>${esc(tip)}</title></g>`;
 function ljChart(level,pts,t){
   const M=MOB(),d=t.dec??2,n=pts.length,W=M?420:840,H=M?270:300,L=M?48:64,R=M?38:48,Tp=14,B=M?32:36;
-  const m=level.mean,s=level.sd;
-  let lo=m-3.6*s,hi=m+3.6*s;
-  pts.forEach(p=>{lo=Math.min(lo,p.r.value-.2*s);hi=Math.max(hi,p.r.value+.2*s)});
+  const segs=segInfo(t,pts);
+  let lo=Infinity,hi=-Infinity;
+  segs.forEach(s=>{lo=Math.min(lo,s.r.mean-3.6*s.r.sd);hi=Math.max(hi,s.r.mean+3.6*s.r.sd)});
+  pts.forEach(p=>{lo=Math.min(lo,p.r.value-.2*p.r.sd);hi=Math.max(hi,p.r.value+.2*p.r.sd)});
   const X=i=>n<=1?L+(W-L-R)/2:L+(W-L-R)*i/(n-1),Y=v=>Tp+(H-Tp-B)*(hi-v)/(hi-lo);
-  let g=`<rect x="${L}" y="${Y(m+2*s)}" width="${W-L-R}" height="${Y(m-2*s)-Y(m+2*s)}" class="band"/>`;
-  [[3,'l3'],[2,'l2'],[1,'l1'],[0,'l0'],[-1,'l1'],[-2,'l2'],[-3,'l3']].forEach(([k,c])=>{
-    const y=Y(m+k*s);
-    g+=`<line x1="${L}" x2="${W-R}" y1="${y}" y2="${y}" class="${c}"/><text x="${L-6}" y="${y+4}" class="tk" text-anchor="end">${fmt(m+k*s,d)}</text><text x="${W-R+6}" y="${y+4}" class="tk">${k===0?'TB':(k>0?'+':'')+k+'SD'}</text>`;
+  const bx=si=>si<=0?L:(X(segs[si-1].i1)+X(segs[si].i0))/2;
+  const KS=[[3,'l3'],[2,'l2'],[1,'l1'],[0,'l0'],[-1,'l1'],[-2,'l2'],[-3,'l3']];
+  let g='';
+  segs.forEach((s,si)=>{
+    const x0=bx(si),x1=si===segs.length-1?W-R:bx(si+1),m=s.r.mean,sd=s.r.sd;
+    g+=`<rect x="${x0}" y="${Y(m+2*sd)}" width="${x1-x0}" height="${Y(m-2*sd)-Y(m+2*sd)}" class="band"/>`;
+    KS.forEach(([k,c])=>{g+=`<line x1="${x0}" x2="${x1}" y1="${Y(m+k*sd)}" y2="${Y(m+k*sd)}" class="${c}"/>`});
   });
+  const cur=segs[segs.length-1].r;
+  KS.forEach(([k])=>{const y=Y(cur.mean+k*cur.sd);
+    g+=`<text x="${L-6}" y="${y+4}" class="tk" text-anchor="end">${fmt(cur.mean+k*cur.sd,d)}</text><text x="${W-R+6}" y="${y+4}" class="tk">${k===0?'TB':(k>0?'+':'')+k+'SD'}</text>`});
   if(n>1)g+=`<path class="ln" d="${pts.map((p,i)=>(i?'L':'M')+X(i)+' '+Y(p.r.value)).join('')}"/>`;
   g+=evLines(t,pts.map(p=>p.r.ts),X,Tp,H-B,W-R-4);
+  segs.forEach((s,si)=>{if(si&&!s.cov)g+=tsMark(bx(si),Tp,H-B,`${fmtDT(pts[s.i0].r.ts)} · Đổi thông số: ${s.text}`)});
+  const pc=pendingChange(t,level,pts,segs);
+  if(pc)g+=tsMark(W-R-4,Tp,H-B,`Thông số hiện tại đã đổi (${pc}), áp dụng từ kết quả tiếp theo`);
   pts.forEach((p,i)=>{const z=p.o.z;g+=marker(X(i),Y(p.r.value),p.o.status,`${fmtDT(p.r.ts)} | ${fmt(p.r.value,d)} ${t.unit||''} | z=${fmt(z,2)}${p.o.flags.length?' | '+p.o.flags.join(', '):''}`)});
   g+=xTicks(pts,X,H-12);
   return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Biểu đồ Levey-Jennings ${esc(level.name)}">${g}</svg>`;
@@ -389,19 +430,22 @@ function zChart(t,levelSeries){
   return legend(lg)+`<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Biểu đồ z-score nhiều mức">${g}</svg>`;
 }
 function stepChart(level,pts,t){
-  const M=MOB(),sc=t.scale,rows=sc.length,rowH=M?30:34,W=M?420:840,L=M?74:90,R=M?12:20,Tp=12,B=M?30:34,H=Tp+B+rows*rowH,n=pts.length;
-  const X=i=>n<=1?L+(W-L-R)/2:L+(W-L-R)*i/(n-1),Y=k=>Tp+(rows-1-k+.5)*rowH;
-  const e=sc.indexOf(level.expected),tol=level.tol||0;
+  const M=MOB(),sc=t.scale,rows=sc.length,rowH=M?30:34,W=M?420:840,L=M?74:90,R=M?12:20,Tp=12,B=M?30:34,H=Tp+B+rows*rowH;
+  const valid=pts.filter(p=>sc.indexOf(p.r.value)>=0),vn=valid.length;
+  const X2=i=>vn<=1?L+(W-L-R)/2:L+(W-L-R)*i/(vn-1),Y=k=>Tp+(rows-1-k+.5)*rowH;
+  const segs=vn?segInfo(t,valid):[];
+  const bx=si=>si<=0?L:(X2(segs[si-1].i1)+X2(segs[si].i0))/2;
   let g='';
-  for(let k=0;k<rows;k++){
-    const cls=k===e?'band':(Math.abs(k-e)<=tol?'band2':'');
-    if(cls)g+=`<rect x="${L}" y="${Y(k)-rowH/2}" width="${W-L-R}" height="${rowH}" class="${cls}"/>`;
-    g+=`<line x1="${L}" x2="${W-R}" y1="${Y(k)}" y2="${Y(k)}" class="l1"/><text x="${L-8}" y="${Y(k)+4}" class="tk" text-anchor="end" style="font-size:12px">${esc(sc[k])}</text>`;
-  }
-  const valid=pts.filter(p=>sc.indexOf(p.r.value)>=0);
-  const vn=valid.length,X2=i=>vn<=1?L+(W-L-R)/2:L+(W-L-R)*i/(vn-1);
+  segs.forEach((s,si)=>{
+    const x0=bx(si),x1=si===segs.length-1?W-R:bx(si+1),e=sc.indexOf(s.r.expected),tol=s.r.tol||0;
+    for(let k=0;k<rows;k++){const cls=k===e?'band':(Math.abs(k-e)<=tol?'band2':'');if(cls)g+=`<rect x="${x0}" y="${Y(k)-rowH/2}" width="${x1-x0}" height="${rowH}" class="${cls}"/>`}
+  });
+  for(let k=0;k<rows;k++)g+=`<line x1="${L}" x2="${W-R}" y1="${Y(k)}" y2="${Y(k)}" class="l1"/><text x="${L-8}" y="${Y(k)+4}" class="tk" text-anchor="end" style="font-size:12px">${esc(sc[k])}</text>`;
   if(vn>1)g+=`<path class="ln" d="${valid.map((p,i)=>(i?'L':'M')+X2(i)+' '+Y(sc.indexOf(p.r.value))).join('')}"/>`;
   g+=evLines(t,valid.map(p=>p.r.ts),X2,Tp,H-B,W-R-4);
+  segs.forEach((s,si)=>{if(si&&!s.cov)g+=tsMark(bx(si),Tp,H-B,`${fmtDT(valid[s.i0].r.ts)} · Đổi thông số: ${s.text}`)});
+  const pc=pendingChange(t,level,valid,segs);
+  if(pc)g+=tsMark(W-R-4,Tp,H-B,`Thông số hiện tại đã đổi (${pc}), áp dụng từ kết quả tiếp theo`);
   valid.forEach((p,i)=>{g+=marker(X2(i),Y(sc.indexOf(p.r.value)),p.o.status,`${fmtDT(p.r.ts)} | ${p.r.value} (mục tiêu: ${p.r.expected})${p.o.flags.length?' | '+p.o.flags.join(', '):''}`)});
   g+=xTicks(valid,X2,H-10);
   return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Biểu đồ theo dõi ${esc(level.name)}">${g}</svg>`;
@@ -439,14 +483,13 @@ function renderMain(){
   if(!t.levels.length)h+=`<div class="card muted">Chưa có mức QC nào — bấm “Khai báo” để thêm.</div>`;
   else{
     h+=`<div class="card"><div class="head"><h2>Biểu đồ theo dõi</h2><span class="spacer"></span>${viewControls()}</div>${viewRange()?`<div class="muted" style="margin:-4px 0 8px;font-size:13px">Đang xem: ${esc(viewRange().label)}</div>`:''}`;
-    const series=t.levels.map(l=>({level:l,pts:lastN(res.filter(r=>isCur(t,l,r)&&out[r.id]).map(r=>({r,o:out[r.id]})))}));
+    const series=t.levels.map(l=>({level:l,pts:lastN(res.filter(r=>r.levelId===l.id&&out[r.id]).map(r=>({r,o:out[r.id]})))}));
+    h+=notesHTML(t,series);
     if(t.type==='quant'){
       if(series.length>=2){const zc=zChart(t,series);if(zc)h+=`<h3 style="font-size:14px;margin:6px 0">Tất cả các mức (z-score)</h3>`+zc}
       series.forEach(ls=>{
-        h+=`<h3 style="font-size:14px;margin:14px 0 2px">${esc(ls.level.name)} <small class="muted">${ls.level.lot?'lô '+esc(ls.level.lot)+' · ':''}TB ${fmt(ls.level.mean,d)} · SD ${fmt(ls.level.sd,d)} · CV ${fmt(ls.level.sd/ls.level.mean*100,1)}%</small></h3>`;
+        h+=`<h3 style="font-size:14px;margin:14px 0 2px">${esc(ls.level.name)} <small class="muted">${ls.level.lot?'lô '+esc(ls.level.lot)+' · ':''}hiện tại: TB ${fmt(ls.level.mean,d)} · SD ${fmt(ls.level.sd,d)} · CV ${fmt(ls.level.sd/ls.level.mean*100,1)}%</small></h3>`;
         h+=ls.pts.length?legend('',true)+ljChart(ls.level,ls.pts,t):emptyMsg();
-        const old=res.filter(r=>r.levelId===ls.level.id&&!isCur(t,ls.level,r)).length;
-        if(old)h+=`<small class="muted">${old} kết quả thuộc lô/thông số cũ — xem trong bảng bên dưới.</small>`;
       });
     }else{
       series.forEach(ls=>{
@@ -460,17 +503,58 @@ function renderMain(){
   h+=tableHTML(t,res,out);
   $('#main').innerHTML=wrapSvg(h);
 }
+function notesHTML(t,series){
+  const vr=viewRange(),items=[];
+  let minTs=Infinity;series.forEach(ls=>ls.pts.forEach(p=>{minTs=Math.min(minTs,p.r.ts)}));
+  evFor(t).forEach(e=>{
+    if(vr?(e.ts<vr.from||e.ts>vr.to):(e.ts<minTs))return;
+    items.push({ts:e.ts,c:EVT[e.type].c,text:EVT[e.type].n+(e.note?': '+e.note:'')+(e.op?' ('+e.op+')':'')});
+  });
+  series.forEach(ls=>{
+    segInfo(t,ls.pts).forEach((s,si)=>{if(si&&!s.cov)items.push({ts:ls.pts[s.i0].r.ts,c:'TS',text:`${ls.level.name}: đổi thông số (${s.text})`})});
+    const pc=pendingChange(t,ls.level,ls.pts,null);
+    if(pc)items.push({ts:Date.now(),c:'TS',text:`${ls.level.name}: thông số hiện tại đã đổi (${pc}), áp dụng từ kết quả tiếp theo`});
+  });
+  if(!items.length)return'';
+  items.sort((a,b)=>a.ts-b.ts);
+  return `<div class="notes"><b>Ghi chú trên biểu đồ</b>${items.map(i=>`<div><span class="nc">${esc(i.c)}</span> ${fmtDT(i.ts)} · ${esc(i.text)}</div>`).join('')}</div>`;
+}
+function levelGroups(rs,out){
+  const m=new Map();
+  rs.forEach(r=>{let g=m.get(r.levelId);if(!g){g={level:{id:r.levelId},pts:[]};m.set(r.levelId,g)}
+    g.level={id:r.levelId,name:r.levelName,lot:r.lot||'',mean:r.mean,sd:r.sd,expected:r.expected,tol:r.tol};g.pts.push({r,o:out[r.id]})});
+  return[...m.values()];
+}
+function diffTest(o,t){
+  const ch=[],f=v=>v==null||v===''?'–':v,ts=x=>x&&x.value>0?x.value+(x.kind==='pct'?'%':' '+(t.unit||'')):'không';
+  if(o.type==='quant'){
+    if((o.unit||'')!==(t.unit||''))ch.push(`Đơn vị: ${f(o.unit)} → ${f(t.unit)}`);
+    if(ts(o.tea)!==ts(t.tea))ch.push(`TEa: ${ts(o.tea)} → ${ts(t.tea)}`);
+  }else if((o.scale||[]).join()!==(t.scale||[]).join())ch.push('Thang kết quả đã đổi');
+  t.levels.forEach(l=>{
+    const ol=o.levels.find(x=>x.id===l.id);
+    if(!ol){ch.push(`Thêm mức ${l.name}`);return}
+    const p=[];
+    if(ol.name!==l.name)p.push(`tên ${ol.name} → ${l.name}`);
+    if((ol.lot||'')!==(l.lot||''))p.push(`lô ${f(ol.lot)} → ${f(l.lot)}`);
+    if(t.type==='quant'){if(ol.mean!==l.mean)p.push(`Mean ${ol.mean} → ${l.mean}`);if(ol.sd!==l.sd)p.push(`SD ${ol.sd} → ${l.sd}`)}
+    else{if(ol.expected!==l.expected)p.push(`mong đợi ${ol.expected} → ${l.expected}`);if((ol.tol||0)!==(l.tol||0))p.push(`sai lệch ${ol.tol||0} → ${l.tol||0} bậc`)}
+    if(p.length)ch.push(`${l.name}: ${p.join(', ')}`);
+  });
+  o.levels.forEach(ol=>{if(!t.levels.find(l=>l.id===ol.id))ch.push(`Xóa mức ${ol.name}`)});
+  return ch;
+}
 function sumHTML(t,res,out){
   if(!t.levels.length)return'';
   const d=t.dec??2,q=t.type==='quant';
   const cards=t.levels.map(l=>{
-    const pts=res.filter(r=>isCur(t,l,r)&&out[r.id]),last=pts[pts.length-1];
+    const pts=res.filter(r=>r.levelId===l.id&&out[r.id]),last=pts[pts.length-1];
     if(!last)return `<div class="sc"><div class="sn">${esc(l.name)}</div><div class="muted" style="font-size:13px">Chưa có kết quả</div></div>`;
     const o=out[last.id],cls=o.status==='ok'?'':o.status;
     const val=q?`${fmt(last.value,d)} <small>${esc(t.unit||'')}</small>`:esc(last.value);
     const sub=q?`z = ${fmt(o.z,2)}`:(t.type==='semi'?`lệch ${o.dev>0?'+':''}${o.dev} bậc · mục tiêu ${esc(l.expected)}`:`mục tiêu: ${esc(l.expected)}`);
     const stl={ok:'Đạt',warn:'Cảnh báo',fail:'Vi phạm'}[o.status];
-    return `<div class="sc ${cls}"><div class="sn">${esc(l.name)}</div><div class="sv">${val}</div><div class="ss">${sub}</div><div class="ss"><span class="badge ${o.status}">${stl}</span> ${o.flags.length?esc(o.flags.join(', ')):''}</div><div class="ss">${fmtDT(last.ts)} · n=${pts.length}</div></div>`;
+    return `<div class="sc ${cls}"><div class="sn">${esc(l.name)}</div><div class="sv">${val}</div><div class="ss">${sub}</div><div class="ss"><span class="badge ${o.status}">${stl}</span> ${o.flags.length?esc(o.flags.join(', ')):''}</div><div class="ss">${fmtDT(last.ts)} · n=${pts.length}</div>${isCur(t,l,last)?'':'<div class="ss" style="color:var(--ev)">TS: thông số đã đổi, chưa có KQ mới</div>'}</div>`;
   }).join('');
   return `<div class="sum">${cards}</div>`;
 }
@@ -566,8 +650,10 @@ function editDevice(id){
 
 function editTest(id,deviceId){
   const t=id?structuredClone(T(id)):{id:uid(),deviceId:deviceId||UI.deviceId||S.devices[0]?.id,name:'',type:'quant',unit:'',dec:2,tea:{kind:'pct',value:''},rules:{...defaultRules},scale:['Âm tính','Dương tính'],levels:[{id:uid(),name:'Mức 1',lot:'',mean:'',sd:'',expected:'',tol:0}]};
-  const hasRes=id&&S.results.some(r=>r.testId===id);
+  const hasRes=id&&S.results.some(r=>r.testId===id),old=id?structuredClone(T(id)):null;
+  let chgReason='';
   const readForm=()=>{
+    const fr=$('#fr');if(fr)chgReason=fr.value;
     t.deviceId=$('#fd').value;t.name=$('#fn').value;t.type=$('#ft').value;
     if(t.type==='quant'){t.unit=$('#fu').value;t.dec=parseInt($('#fdec').value)||0;t.tea={kind:$('#fk').value,value:$('#fv').value};
       t.rules={};Object.keys(defaultRules).forEach(k=>t.rules[k]=$('#r_'+k).checked)}
@@ -583,7 +669,7 @@ function editTest(id,deviceId){
     ${q?`<div class="row" style="margin-top:10px"><label class="fld"><span>Đơn vị</span><input id="fu" value="${esc(t.unit)}" placeholder="mg/dL"></label><label class="fld"><span>Số chữ số thập phân</span><input id="fdec" inputmode="numeric" value="${esc(t.dec)}"></label><label class="fld"><span>TEa (nếu có)</span><div style="display:flex;gap:6px"><input id="fv" inputmode="decimal" value="${esc(t.tea?.value)}" placeholder="vd 10"><select id="fk" style="width:90px"><option value="pct" ${t.tea?.kind==='pct'?'selected':''}>%</option><option value="abs" ${t.tea?.kind==='abs'?'selected':''}>đơn vị</option></select></div></label></div>
     <p style="margin:12px 0 4px;font-size:13px" class="muted">Quy tắc Westgard áp dụng</p><div class="chk">${Object.entries(ruleNames).map(([k,v])=>`<label><input type="checkbox" id="r_${k}" ${t.rules[k]!==false?'checked':''}>${v}</label>`).join('')}</div>`
     :`<label class="fld" style="margin-top:10px"><span>Thang kết quả, sắp xếp từ thấp đến cao, cách nhau bằng dấu phẩy</span><input id="fs" value="${esc(t.scale.join(', '))}" placeholder="Âm tính, ±, 1+, 2+, 3+"></label>`}
-    <p style="margin:14px 0 4px;font-size:13px" class="muted">Các mức nội kiểm</p><div class="scroll"><table><tr><th>Tên mức</th><th>Số lô</th>${q?'<th>Mean</th><th>SD</th>':`<th>Kết quả mong đợi</th>${t.type==='semi'?'<th>Sai lệch cho phép (bậc)</th>':''}`}<th></th></tr>${lv}</table></div><p><button type="button" id="addLv" class="sm">＋ Thêm mức</button></p>${id&&q?'<small class="muted">Đổi mean/SD hoặc số lô sẽ mở một chuỗi biểu đồ mới; kết quả cũ vẫn được giữ nguyên với thông số lúc nhập.</small>':''}`;
+    <p style="margin:14px 0 4px;font-size:13px" class="muted">Các mức nội kiểm</p><div class="scroll"><table><tr><th>Tên mức</th><th>Số lô</th>${q?'<th>Mean</th><th>SD</th>':`<th>Kết quả mong đợi</th>${t.type==='semi'?'<th>Sai lệch cho phép (bậc)</th>':''}`}<th></th></tr>${lv}</table></div><p><button type="button" id="addLv" class="sm">＋ Thêm mức</button></p>${hasRes?`<label class="fld" style="margin-top:6px"><span>Lý do thay đổi (ghi chú lên biểu đồ nếu bạn đổi mean, SD, lô…)</span><input id="fr" value="${esc(chgReason)}" placeholder="vd: đổi lô QC, tính lại SD sau 20 điểm"></label><small class="muted">Kết quả cũ giữ nguyên thông số lúc nhập. Biểu đồ vẫn hiện đủ, vạch giới hạn đổi tại điểm thay đổi và có ghi chú “TS”.</small>`:''}`;
     $('#ft').onchange=()=>{readForm();if(t.type!=='quant'&&!t.scale.length)t.scale=['Âm tính','Dương tính'];t.levels.forEach(l=>{if(t.type!=='quant'&&!t.scale.includes(l.expected))l.expected=t.scale[0]});draw()};
     const fs=$('#fs');if(fs)fs.onchange=()=>{readForm();t.levels.forEach(l=>{if(!t.scale.includes(l.expected))l.expected=t.scale[0]});draw()};
     $('#addLv').onclick=()=>{readForm();t.levels.push({id:uid(),name:'Mức '+(t.levels.length+1),lot:'',mean:'',sd:'',expected:t.scale[0]||'',tol:0});draw()};
@@ -601,7 +687,9 @@ function editTest(id,deviceId){
         l.tol=t.type==='semi'?Math.max(0,parseInt(l.tol)||0):0;delete l.mean;delete l.sd}
     }
     if(t.type==='quant'){const v=num(t.tea.value);t.tea={kind:t.tea.kind,value:isNaN(v)?0:v};delete t.scale}else{delete t.unit;delete t.tea;delete t.rules}
+    const ch=hasRes?diffTest(old,t):[];
     if(id){S.tests[S.tests.findIndex(x=>x.id===id)]=t}else S.tests.push(t);
+    if(ch.length)S.events.push({id:uid(),deviceId:t.deviceId,testId:t.id,ts:Date.now(),type:'param',op:'',note:ch.join('; ')+(chgReason.trim()?' — '+chgReason.trim():''),reset:false});
     UI.testId=t.id;UI.deviceId=t.deviceId;document.body.classList.remove('menu');save();render();
   });
   draw();
@@ -1023,9 +1111,10 @@ function reportTest(t,range){
   const sum={n:inR.length,ok:0,warn:0,fail:0};inR.forEach(r=>sum[out[r.id].status]++);
   if(!inR.length)return{html:h+'<p class="muted">Không có kết quả trong kỳ báo cáo.</p></div>',sum};
   h+=`<p style="margin:4px 0">${sum.n} kết quả: ${sum.ok} đạt, ${sum.warn} cảnh báo, ${sum.fail} vi phạm.</p>`;
-  const gs=groupsOf(inR,out);
-  if(t.type==='quant'&&new Set(gs.map(g=>g.level.id)).size>=2)h+=`<h3>Tất cả các mức (z-score)</h3>`+zChart(t,gs.map(g=>({level:{...g.level,name:g.level.name+(g.level.lot?' · lô '+g.level.lot:'')},pts:g.pts})));
-  gs.forEach(g=>{
+  const gs=groupsOf(inR,out),lgs=levelGroups(inR,out);
+  h+=notesHTML(t,lgs);
+  if(t.type==='quant'&&lgs.length>=2)h+=`<h3>Tất cả các mức (z-score)</h3>`+zChart(t,lgs);
+  lgs.forEach(g=>{
     const l=g.level,sub=t.type==='quant'?`TB ${fmt(l.mean,d)} · SD ${fmt(l.sd,d)}`:`mục tiêu: ${esc(l.expected)}${t.type==='semi'?` (±${l.tol||0} bậc)`:''}`;
     h+=`<h3>${esc(l.name)}${l.lot?' · lô '+esc(l.lot):''} <span class="muted" style="font-weight:400">${sub}</span></h3>`+(t.type==='quant'?ljChart(l,g.pts,t):stepChart(l,g.pts,t));
   });
