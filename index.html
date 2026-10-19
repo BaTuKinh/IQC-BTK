@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#1f66d6"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Nội kiểm"><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🧪%3C/text%3E%3C/svg%3E">
 <title>Nội kiểm xét nghiệm</title>
 <style>
 :root{--ev:#7a4fd1;--bg:#f5f6f8;--card:#fff;--ink:#1c2430;--mute:#667085;--line:#e2e6ed;--accent:#1f66d6;--ok:#1a7f5a;--warn:#b86e00;--fail:#c62f3d;--band:#eaf3ff;--band2:#fff6e2;--grid:#9aa4b2;--soft:#f0f2f6}
@@ -67,11 +67,36 @@ dialog .mf{padding:10px 16px;border-top:1px solid var(--line);display:flex;gap:8
 .chk label{display:flex;gap:5px;align-items:center}.chk input{width:auto}
 #toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:99px;font-size:14px;display:none;z-index:20}
 .empty{text-align:center;padding:40px 16px;color:var(--mute)}
+.menu{display:none}
+.cw{overflow-x:auto}
+@media(max-width:820px){
+ .menu{display:inline-block}
+ .side{display:none}
+ body.menu .side{display:block}
+ input,select,textarea{font-size:16px}
+ svg.chart{min-width:680px}
+ header{padding:10px 12px;gap:8px}
+ header h1{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ button{padding:8px 12px}
+ .card{padding:12px}
+}
+#rep{position:fixed;inset:0;z-index:30;background:#fff;color:#111;overflow:auto;display:none;--ink:#111;--mute:#555;--line:#d9dde4;--accent:#1f66d6;--ok:#1a7f5a;--warn:#b86e00;--fail:#c62f3d;--band:#eaf3ff;--band2:#fff6e2;--grid:#7b8494;--soft:#f0f2f6;--ev:#7a4fd1;--card:#fff;--bg:#fff}
+#rep.on{display:block}
+#rep .bar{position:sticky;top:0;background:#fff;border-bottom:1px solid #ddd;padding:8px 16px;display:flex;gap:8px;z-index:2}
+#rep .page{max-width:960px;margin:0 auto;padding:16px}
+#rep h1{font-size:21px;margin:0 0 4px}#rep h2{font-size:16px;margin:20px 0 6px;border-bottom:2px solid #333;padding-bottom:2px}
+#rep h3{font-size:13px;margin:10px 0 2px}
+#rep .cw,#rep tr{break-inside:avoid}
+#rep table{font-size:12.5px}
+#rep .sign{display:flex;gap:40px;margin-top:48px}#rep .sign div{flex:1;text-align:center;border-top:1px solid #333;padding-top:4px;font-size:13px}
+@media print{body>*:not(#rep){display:none!important}#rep{position:static;overflow:visible}#rep .bar{display:none}svg.chart{min-width:0}}
 </style>
 </head>
 <body>
 <header>
+  <button id="menuBtn" class="menu" data-act="menu" title="Danh sách thiết bị">☰</button>
   <h1>🧪 Nội kiểm xét nghiệm (IQC)</h1>
+  <button data-act="report">Báo cáo</button>
   <button data-act="data">Dữ liệu / GitHub</button>
 </header>
 <div class="app">
@@ -80,6 +105,7 @@ dialog .mf{padding:10px 16px;border-top:1px solid var(--line);display:flex;gap:8
 </div>
 <dialog id="m"><div class="mh" id="mh"></div><div class="mb" id="mb"></div><div class="mf"><span class="err" id="me"></span><button id="mc">Đóng</button><button class="pri" id="ms">Lưu</button></div></dialog>
 <div id="toast"></div>
+<div id="rep"></div>
 <script>
 'use strict';
 const $=(s,r=document)=>r.querySelector(s);
@@ -321,7 +347,7 @@ function renderMain(){
   }
   const dev=D(t.deviceId),d=t.dec??2,{res,out}=evalTest(t);
   let h=`<div class="card"><div class="head"><h2>${esc(t.name)}</h2><span class="badge">${typeName[t.type]}</span><span class="muted">${esc(dev?.name||'')}${t.unit?' · '+esc(t.unit):''}${t.tea&&t.tea.value>0?` · TEa ${t.tea.value}${t.tea.kind==='pct'?'%':' '+esc(t.unit||'')}`:''}</span><span class="spacer"></span>
-  <button data-act="newEvent" data-id="${t.id}">＋ Sự kiện</button><button data-act="editTest" data-id="${t.id}">Khai báo</button><button data-act="csv" data-id="${t.id}">CSV</button><button class="danger" data-act="delTest" data-id="${t.id}">Xóa</button></div>${entryHTML(t)}</div>`;
+  <button data-act="newEvent" data-id="${t.id}">＋ Sự kiện</button><button data-act="editTest" data-id="${t.id}">Khai báo</button><button data-act="csv" data-id="${t.id}">CSV</button><button data-act="xlsx" data-id="${t.id}">Excel</button><button class="danger" data-act="delTest" data-id="${t.id}">Xóa</button></div>${entryHTML(t)}</div>`;
   if(UI.flash){h+=UI.flash;UI.flash=null}
   else if(res.length){
     const last=res[res.length-1].run;
@@ -350,7 +376,7 @@ function renderMain(){
     h+=statsHTML(t,res,out);
   }
   h+=tableHTML(t,res,out);
-  $('#main').innerHTML=h;
+  $('#main').innerHTML=wrapSvg(h);
   const sel=$('#lastN');if(sel)sel.value=String(UI.lastN);
 }
 function entryHTML(t){
@@ -485,7 +511,7 @@ function editTest(id,deviceId){
 
 function dataDialog(){
   const c=ghCfg();
-  modal('Dữ liệu & đồng bộ GitHub',`<h2>Sao lưu</h2><div class="row"><button id="bExp">Tải xuống JSON</button><button id="bImp">Nạp từ file JSON…</button><button id="bCsv">Xuất tất cả CSV</button></div><input type="file" id="fImp" accept="application/json,.json" style="display:none">
+  modal('Dữ liệu & đồng bộ GitHub',`<h2>Sao lưu</h2><div class="row"><button id="bExp">Tải xuống JSON</button><button id="bImp">Nạp từ file JSON…</button><button id="bCsv">Xuất tất cả CSV</button><button id="bXlsx">Xuất tất cả Excel</button></div><input type="file" id="fImp" accept="application/json,.json" style="display:none">
   <h2 style="margin-top:18px">Đồng bộ GitHub</h2><p class="muted" style="font-size:13px;margin-top:0">Dữ liệu được ghi vào một file JSON trong repo của bạn. Token chỉ lưu trong trình duyệt này. Nên dùng <b>fine-grained token</b> chỉ cấp quyền <i>Contents: Read and write</i> cho đúng repo này.</p>
   <div class="row"><label class="fld"><span>Repo (chủ/tên)</span><input id="gr" value="${esc(c.repo||'')}" placeholder="ten-github/ten-repo"></label><label class="fld"><span>Nhánh</span><input id="gb" value="${esc(c.branch||'main')}"></label><label class="fld"><span>Đường dẫn file</span><input id="gp" value="${esc(c.path||'data.json')}"></label></div>
   <label class="fld" style="margin-top:10px"><span>Personal access token</span><input id="gt" type="password" value="${esc(c.token||'')}" autocomplete="off"></label>
@@ -495,6 +521,7 @@ function dataDialog(){
   const rd=()=>{const o={...ghCfg(),repo:$('#gr').value.trim(),branch:$('#gb').value.trim()||'main',path:$('#gp').value.trim()||'data.json',token:$('#gt').value.trim(),auto:$('#ga').checked};localStorage.setItem(GH,JSON.stringify(o));return o};
   $('#bExp').onclick=()=>dl('iqc-data.json',JSON.stringify(S,null,1),'application/json');
   $('#bCsv').onclick=()=>csv(null);
+  $('#bXlsx').onclick=()=>exportXlsx(null);
   $('#bImp').onclick=()=>$('#fImp').click();
   $('#fImp').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const d=normalize(JSON.parse(await f.text()));if(!confirm('Thay toàn bộ dữ liệu hiện tại bằng nội dung file này?'))return;S=d;UI.testId=null;save();render();$('#m').close();toast('Đã nạp dữ liệu')}catch(err){toast('Lỗi: '+err.message)}};
   $('#gPush').onclick=async()=>{const c=rd();if(!c.repo||!c.token)return toast('Cần nhập repo và token');toast('Đang đẩy…');try{try{await ghPush(c)}catch(e){if(e.code==='CONFLICT'&&confirm(e.message+'\n\nVẫn ghi đè dữ liệu trên GitHub bằng dữ liệu của máy này?'))await ghPush(c,true);else throw e}toast('Đã đẩy lên GitHub')}catch(e){toast('Lỗi GitHub: '+e.message)}};
@@ -537,6 +564,151 @@ function editEvent(testId){
     save();render();toast('Đã ghi sự kiện');
   });
   const sync=()=>{$('#er').checked=EVT[$('#et').value].reset};$('#et').onchange=sync;sync();
+}
+
+/* ---------- xuất Excel (.xlsx), không cần thư viện ---------- */
+const wrapSvg=h=>h.replace(/<svg class="chart"/g,'<div class="cw"><svg class="chart"').replace(/<\/svg>/g,'</svg></div>');
+const CRCT=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
+const crc32=b=>{let c=0xFFFFFFFF;for(let i=0;i<b.length;i++)c=CRCT[(c^b[i])&255]^(c>>>8);return(c^0xFFFFFFFF)>>>0};
+function zipStore(files){
+  const enc=new TextEncoder(),parts=[],cen=[];let off=0;
+  const u16=v=>[v&255,(v>>>8)&255],u32=v=>[v&255,(v>>>8)&255,(v>>>16)&255,(v>>>24)&255];
+  files.forEach(f=>{
+    const nm=enc.encode(f.name),crc=crc32(f.data),sz=f.data.length;
+    const lh=new Uint8Array([0x50,0x4b,3,4,...u16(20),...u16(0x0800),...u16(0),...u16(0),...u16(0x21),...u32(crc),...u32(sz),...u32(sz),...u16(nm.length),...u16(0)]);
+    parts.push(lh,nm,f.data);
+    cen.push(new Uint8Array([0x50,0x4b,1,2,...u16(20),...u16(20),...u16(0x0800),...u16(0),...u16(0),...u16(0x21),...u32(crc),...u32(sz),...u32(sz),...u16(nm.length),...u16(0),...u16(0),...u16(0),...u16(0),...u32(0),...u32(off)]),nm);
+    off+=lh.length+nm.length+sz;
+  });
+  const cdSize=cen.reduce((a,b)=>a+b.length,0);
+  const end=new Uint8Array([0x50,0x4b,5,6,...u16(0),...u16(0),...u16(files.length),...u16(files.length),...u32(cdSize),...u32(off),...u16(0)]);
+  return new Blob([...parts,...cen,end],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+}
+const xe=s=>String(s??'').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const colName=i=>{let s='';for(i++;i>0;i=Math.floor((i-1)/26))s=String.fromCharCode(65+(i-1)%26)+s;return s};
+const xlDate=ts=>(ts-new Date(ts).getTimezoneOffset()*60000)/86400000+25569;
+function sheetXML(rows,widths){
+  let x='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="15"/>';
+  if(widths)x+='<cols>'+widths.map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join('')+'</cols>';
+  x+='<sheetData>';
+  rows.forEach((row,ri)=>{
+    x+=`<row r="${ri+1}">`;
+    row.forEach((c,ci)=>{
+      if(c===''||c==null)return;
+      const ref=colName(ci)+(ri+1),hs=ri===0?' s="1"':'';
+      if(typeof c==='number'){if(isFinite(c))x+=`<c r="${ref}"${hs}><v>${c}</v></c>`}
+      else if(typeof c==='object'&&c.d!=null)x+=`<c r="${ref}" s="2"><v>${xlDate(c.d)}</v></c>`;
+      else x+=`<c r="${ref}"${hs} t="inlineStr"><is><t xml:space="preserve">${xe(c)}</t></is></c>`;
+    });
+    x+='</row>';
+  });
+  return x+'</sheetData></worksheet>';
+}
+function buildXlsx(sheets){
+  const enc=new TextEncoder(),H='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+  const names=sheets.map((s,i)=>s.name.replace(/[\\\/?*\[\]:]/g,'').slice(0,31)||'Sheet'+(i+1));
+  const files=[
+    {name:'[Content_Types].xml',data:H+'<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'+sheets.map((s,i)=>`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')+'</Types>'},
+    {name:'_rels/.rels',data:H+'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'},
+    {name:'xl/workbook.xml',data:H+'<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>'+names.map((n,i)=>`<sheet name="${xe(n)}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join('')+'</sheets></workbook>'},
+    {name:'xl/_rels/workbook.xml.rels',data:H+'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+sheets.map((s,i)=>`<Relationship Id="rId${i+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join('')+`<Relationship Id="rId${sheets.length+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`},
+    {name:'xl/styles.xml',data:H+'<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="1"><numFmt numFmtId="164" formatCode="dd/mm/yyyy\\ hh:mm"/></numFmts><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFDCE6F5"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>'}
+  ];
+  sheets.forEach((s,i)=>files.push({name:`xl/worksheets/sheet${i+1}.xml`,data:sheetXML(s.rows,s.widths)}));
+  return zipStore(files.map(f=>({name:f.name,data:enc.encode(f.data)})));
+}
+function ptsStats(t,l,pts){
+  const n=pts.length;
+  if(t.type!=='quant'){const bad=pts.filter(p=>p.o.status==='fail').length;return{n,pct:n?(n-bad)/n*100:null,fail:bad}}
+  if(!n)return{n,fail:0};
+  const v=pts.map(p=>p.r.value),mean=v.reduce((a,b)=>a+b,0)/n,sd=n>1?Math.sqrt(v.reduce((a,b)=>a+(b-mean)**2,0)/(n-1)):null;
+  const cv=sd!=null?sd/mean*100:null,bias=l.mean?(mean-l.mean)/l.mean*100:null;
+  const sig=t.tea&&t.tea.kind==='pct'&&t.tea.value>0&&cv&&bias!=null?(t.tea.value-Math.abs(bias))/cv:null;
+  return{n,mean,sd,cv,bias,sig,fail:pts.filter(p=>p.o.status==='fail').length};
+}
+function exportXlsx(testId){
+  const tests=S.tests.filter(t=>!testId||t.id===testId);
+  if(!tests.length){toast('Chưa có dữ liệu để xuất');return}
+  const st={ok:'Đạt',warn:'Cảnh báo',fail:'Vi phạm'},rd=(x,d)=>x==null||isNaN(x)?'':+x.toFixed(d);
+  const R=[['Thiết bị','Xét nghiệm','Loại','Mức','Lô','Thời gian','Kết quả','Mean','SD','z / độ lệch bậc','Trạng thái','Quy tắc / ghi nhận','Lý do chạy QC','Người thực hiện','Ghi chú','Hành động khắc phục']];
+  const X=[['Thiết bị','Xét nghiệm','Loại','Mức','Lô','n','Mean mục tiêu','SD mục tiêu','TB thực tế','SD thực tế','CV %','Bias %','Sigma','Tỷ lệ đạt %','Số không đạt']];
+  const C=[['Thiết bị','Xét nghiệm','Loại','Đơn vị','TEa','Mức','Lô','Mean','SD','Kết quả mong đợi','Sai lệch cho phép (bậc)']];
+  const E=[['Thiết bị','Áp dụng cho','Loại sự kiện','Thời gian','Người thực hiện','Nội dung','Bắt đầu chuỗi quy tắc mới']];
+  tests.forEach(t=>{
+    const dn=D(t.deviceId)?.name||'',{res,out}=evalTest(t),q=t.type==='quant',d=t.dec??2;
+    res.forEach(r=>{const o=out[r.id]||{flags:[],status:'ok'};R.push([dn,t.name,typeName[t.type],r.levelName,r.lot||'',{d:r.ts},q?r.value:String(r.value),r.mean??'',r.sd??'',q?rd(o.z,2):o.dev,st[o.status],o.flags.join('; '),r.reason||'Thường quy',r.op||'',r.note||'',r.action||''])});
+    t.levels.forEach(l=>{
+      const s=ptsStats(t,l,res.filter(r=>isCur(t,l,r)&&out[r.id]).map(r=>({r,o:out[r.id]})));
+      X.push(q?[dn,t.name,typeName[t.type],l.name,l.lot||'',s.n,l.mean,l.sd,rd(s.mean,d+1),rd(s.sd,d+1),rd(s.cv,1),rd(s.bias,1),rd(s.sig,1),'',s.fail]:[dn,t.name,typeName[t.type],l.name,l.lot||'',s.n,'','','','','','','',rd(s.pct,1),s.fail]);
+      C.push([dn,t.name,typeName[t.type],t.unit||'',t.tea&&t.tea.value>0?t.tea.value+(t.tea.kind==='pct'?' %':' '+(t.unit||'')):'',l.name,l.lot||'',q?l.mean:'',q?l.sd:'',q?'':l.expected,q?'':(l.tol||0)]);
+    });
+  });
+  const dev=new Set(tests.map(t=>t.deviceId));
+  S.events.filter(e=>dev.has(e.deviceId)&&(!testId||!e.testId||e.testId===testId)).sort((a,b)=>a.ts-b.ts).forEach(e=>E.push([D(e.deviceId)?.name||'',e.testId?(T(e.testId)?.name||''):'Toàn thiết bị',EVT[e.type].n,{d:e.ts},e.op||'',e.note||'',e.reset?'Có':'Không']));
+  const blob=buildXlsx([
+    {name:'Kết quả',rows:R,widths:[22,20,16,18,10,17,12,10,10,12,11,28,26,16,24,32]},
+    {name:'Thống kê',rows:X,widths:[22,20,16,18,10,6,13,13,11,11,8,8,8,12,12]},
+    {name:'Sự kiện',rows:E,widths:[22,22,24,17,16,40,14]},
+    {name:'Khai báo',rows:C,widths:[22,20,16,10,12,18,10,10,10,18,14]}]);
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='noi-kiem-'+new Date().toISOString().slice(0,10)+'.xlsx';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),3000);
+  return blob;
+}
+
+/* ---------- báo cáo in / lưu PDF ---------- */
+function periodRange(p){
+  const n=new Date(),y=n.getFullYear(),m=n.getMonth();
+  if(p==='month')return{from:new Date(y,m,1).getTime(),to:new Date(y,m+1,1).getTime()-1,label:`Tháng ${m+1}/${y}`};
+  if(p==='prev'){const d=new Date(y,m-1,1);return{from:d.getTime(),to:new Date(y,m,1).getTime()-1,label:`Tháng ${d.getMonth()+1}/${d.getFullYear()}`}}
+  if(p==='30')return{from:Date.now()-30*864e5,to:Date.now(),label:'30 ngày gần nhất'};
+  return{from:0,to:Infinity,label:'Toàn bộ dữ liệu'};
+}
+function groupsOf(res,out){
+  const g={};
+  res.forEach(r=>{const k=[r.levelId,r.lot||'',r.mean,r.sd,r.expected,r.tol].join('|');
+    (g[k]??={level:{id:r.levelId,name:r.levelName,lot:r.lot||'',mean:r.mean,sd:r.sd,expected:r.expected,tol:r.tol},pts:[]}).pts.push({r,o:out[r.id]})});
+  return Object.values(g);
+}
+function reportTest(t,range){
+  const d=t.dec??2,{res,out}=evalTest(t),inR=res.filter(r=>r.ts>=range.from&&r.ts<=range.to&&out[r.id]);
+  const tea=t.tea&&t.tea.value>0?` · TEa ${t.tea.value}${t.tea.kind==='pct'?'%':' '+esc(t.unit||'')}`:'';
+  let h=`<div class="tst"><h2>${esc(D(t.deviceId)?.name||'')} — ${esc(t.name)} <small style="font-weight:400">(${typeName[t.type]}${t.unit?', '+esc(t.unit):''}${tea})</small></h2>`;
+  const sum={n:inR.length,ok:0,warn:0,fail:0};inR.forEach(r=>sum[out[r.id].status]++);
+  if(!inR.length)return{html:h+'<p class="muted">Không có kết quả trong kỳ báo cáo.</p></div>',sum};
+  h+=`<p style="margin:4px 0">${sum.n} kết quả: ${sum.ok} đạt, ${sum.warn} cảnh báo, ${sum.fail} vi phạm.</p>`;
+  const gs=groupsOf(inR,out);
+  if(t.type==='quant'&&new Set(gs.map(g=>g.level.id)).size>=2)h+=`<h3>Tất cả các mức (z-score)</h3>`+zChart(t,gs.map(g=>({level:{...g.level,name:g.level.name+(g.level.lot?' · lô '+g.level.lot:'')},pts:g.pts})));
+  gs.forEach(g=>{
+    const l=g.level,sub=t.type==='quant'?`TB ${fmt(l.mean,d)} · SD ${fmt(l.sd,d)}`:`mục tiêu: ${esc(l.expected)}${t.type==='semi'?` (±${l.tol||0} bậc)`:''}`;
+    h+=`<h3>${esc(l.name)}${l.lot?' · lô '+esc(l.lot):''} <span class="muted" style="font-weight:400">${sub}</span></h3>`+(t.type==='quant'?ljChart(l,g.pts,t):stepChart(l,g.pts,t));
+  });
+  const rows=gs.map(g=>{const l=g.level,s=ptsStats(t,l,g.pts);
+    return t.type==='quant'?`<tr><td>${esc(l.name)}</td><td>${esc(l.lot)}</td><td>${s.n}</td><td>${fmt(l.mean,d)}</td><td>${fmt(s.mean,d)}</td><td>${fmt(s.sd,d)}</td><td>${fmt(s.cv,1)}%</td><td>${fmt(s.bias,1)}%</td><td>${fmt(s.sig,1)}</td><td>${s.fail}</td></tr>`
+      :`<tr><td>${esc(l.name)}</td><td>${esc(l.lot)}</td><td>${esc(l.expected)}</td><td>${s.n}</td><td>${s.pct==null?'–':fmt(s.pct,1)+'%'}</td><td>${s.fail}</td></tr>`}).join('');
+  h+=`<h3>Thống kê trong kỳ</h3><div class="scroll"><table>${t.type==='quant'?'<tr><th>Mức</th><th>Lô</th><th>n</th><th>TB mục tiêu</th><th>TB thực tế</th><th>SD thực tế</th><th>CV%</th><th>Bias%</th><th>Sigma</th><th>Vi phạm</th></tr>':'<tr><th>Mức</th><th>Lô</th><th>Mục tiêu</th><th>n</th><th>Tỷ lệ đạt</th><th>Không đạt</th></tr>'}${rows}</table></div>`;
+  const bad=inR.filter(r=>out[r.id].flags.length);
+  h+=`<h3>Vi phạm / cảnh báo và hành động khắc phục</h3>`+(bad.length?`<div class="scroll"><table><tr><th>Thời gian</th><th>Mức</th><th>Kết quả</th><th>Ghi nhận</th><th>Lý do chạy</th><th>Hành động khắc phục</th></tr>${bad.map(r=>`<tr><td>${fmtDT(r.ts)}</td><td>${esc(r.levelName)}</td><td>${t.type==='quant'?fmt(r.value,d)+' (z '+fmt(out[r.id].z,2)+')':esc(r.value)}</td><td>${esc(out[r.id].flags.join(', '))}</td><td>${esc(r.reason||'Thường quy')}</td><td>${esc(r.action||'')}</td></tr>`).join('')}</table></div>`:'<p class="muted">Không có.</p>');
+  const evs=evFor(t).filter(e=>e.ts>=range.from&&e.ts<=range.to);
+  if(evs.length)h+=`<h3>Sự kiện thiết bị trong kỳ</h3><div class="scroll"><table><tr><th>Thời gian</th><th>Loại</th><th>Nội dung</th><th>Người thực hiện</th></tr>${evs.map(e=>`<tr><td>${fmtDT(e.ts)}</td><td>${esc(EVT[e.type].n)}</td><td>${esc(e.note||'')}</td><td>${esc(e.op||'')}</td></tr>`).join('')}</table></div>`;
+  return{html:h+'</div>',sum};
+}
+function reportDialog(){
+  const t=T(UI.testId);
+  if(!S.tests.length){toast('Chưa có xét nghiệm nào');return}
+  modal('Báo cáo nội kiểm (in / lưu PDF)',`<div class="row"><label class="fld"><span>Phạm vi</span><select id="rs">${t?`<option value="test">Xét nghiệm đang chọn (${esc(t.name)})</option><option value="device">Tất cả xét nghiệm của ${esc(D(t.deviceId)?.name||'')}</option>`:''}<option value="lab">Toàn phòng (mọi thiết bị)</option></select></label><label class="fld"><span>Thời gian</span><select id="rp"><option value="month">Tháng này</option><option value="prev">Tháng trước</option><option value="30">30 ngày gần nhất</option><option value="all">Tất cả</option></select></label></div><label class="fld" style="margin-top:10px"><span>Tên phòng / đơn vị (hiện ở đầu báo cáo)</span><input id="rl" value="${esc(localStorage.getItem('iqc.lab')||'')}"></label><p class="muted" style="font-size:13px">Báo cáo mở ngay trong app. Bấm “In / Lưu PDF” rồi chọn “Lưu dưới dạng PDF”. Trên điện thoại: Chia sẻ → In → PDF.</p>`,
+  ()=>{const lab=$('#rl').value.trim();localStorage.setItem('iqc.lab',lab);openReport($('#rs').value,$('#rp').value,lab)},{saveLabel:'Tạo báo cáo'});
+}
+function openReport(scope,period,lab){
+  const t0=T(UI.testId),range=periodRange(period);
+  const order=id=>S.devices.findIndex(d=>d.id===id);
+  let tests=scope==='test'&&t0?[t0]:scope==='device'&&t0?S.tests.filter(t=>t.deviceId===t0.deviceId):[...S.tests];
+  tests=tests.sort((a,b)=>order(a.deviceId)-order(b.deviceId));
+  const keep=UI.lastN;UI.lastN=0;
+  const parts=tests.map(t=>({t,...reportTest(t,range)}));
+  UI.lastN=keep;
+  const top=parts.length>1?`<h2>Tổng hợp</h2><div class="scroll"><table><tr><th>Thiết bị</th><th>Xét nghiệm</th><th>Số KQ</th><th>Đạt</th><th>Cảnh báo</th><th>Vi phạm</th></tr>${parts.map(p=>`<tr><td>${esc(D(p.t.deviceId)?.name||'')}</td><td>${esc(p.t.name)}</td><td>${p.sum.n}</td><td>${p.sum.ok}</td><td>${p.sum.warn}</td><td>${p.sum.fail}</td></tr>`).join('')}</table></div>`:'';
+  const dt=new Date();
+  $('#rep').innerHTML=wrapSvg(`<div class="bar"><button class="pri" data-act="repPrint">In / Lưu PDF</button><button data-act="repClose">Đóng</button></div><div class="page"><h1>Báo cáo nội kiểm xét nghiệm</h1><div style="color:#555">${lab?esc(lab)+' · ':''}Kỳ báo cáo: ${esc(range.label)} · Ngày lập: ${pad(dt.getDate())}/${pad(dt.getMonth()+1)}/${dt.getFullYear()}</div>${top}${parts.map(p=>p.html).join('')}<div class="sign"><div>Người lập</div><div>Người phụ trách</div><div>Trưởng khoa / Phê duyệt</div></div></div>`);
+  $('#rep').classList.add('on');$('#rep').scrollTop=0;
 }
 
 /* ---------- GitHub ---------- */
@@ -593,12 +765,17 @@ function csv(testId){
 document.addEventListener('click',e=>{
   const b=e.target.closest('[data-act]');if(!b)return;
   const a=b.dataset.act,id=b.dataset.id;
-  if(a==='pick'){UI.testId=id;UI.deviceId=T(id).deviceId;UI.showAll=false;render()}
+  if(a==='pick'){UI.testId=id;UI.deviceId=T(id).deviceId;UI.showAll=false;document.body.classList.remove('menu');render();window.scrollTo(0,0)}
   else if(a==='newDevice')editDevice();
   else if(a==='editDevice')editDevice(id);
   else if(a==='newTest')editTest(null,id);
   else if(a==='editTest')editTest(id);
   else if(a==='data')dataDialog();
+  else if(a==='xlsx')exportXlsx(id);
+  else if(a==='report')reportDialog();
+  else if(a==='repPrint')window.print();
+  else if(a==='repClose')$('#rep').classList.remove('on');
+  else if(a==='menu')document.body.classList.toggle('menu');
   else if(a==='csv')csv(id);
   else if(a==='toggleAll'){UI.showAll=!UI.showAll;render()}
   else if(a==='delTest'){const t=T(id);if(confirm(`Xóa xét nghiệm “${t.name}” và toàn bộ kết quả?`)){S.results=S.results.filter(r=>r.testId!==id);S.events=S.events.filter(e=>e.testId!==id);S.tests=S.tests.filter(x=>x.id!==id);UI.testId=null;save();render()}}
@@ -616,7 +793,7 @@ document.addEventListener('change',e=>{if(e.target.id==='lastN'){UI.lastN=parseI
   if(!loadLocal()){
     try{const r=await fetch('data.json',{cache:'no-store'});if(r.ok){S=normalize(await r.json());localStorage.setItem(LS,JSON.stringify(S))}}catch(e){}
   }
-  if(S.tests.length){UI.testId=S.tests[0].id;UI.deviceId=S.tests[0].deviceId}
+  if(S.tests.length){UI.testId=S.tests[0].id;UI.deviceId=S.tests[0].deviceId}else document.body.classList.add('menu')
   render();
   bootSync();
 })();

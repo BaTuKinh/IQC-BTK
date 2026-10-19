@@ -11,7 +11,9 @@ App web một file (`index.html`), miễn phí, không cần cài đặt, không
 - **Sự kiện thiết bị** (nút “＋ Sự kiện”): bảo trì, hiệu chuẩn, sửa chữa/thay linh kiện, đổi lô thuốc thử, đổi lô QC. Hiện thành vạch đứng có nhãn (BT, HC, SC, TT, LQ) trên biểu đồ và nằm xen trong bảng kết quả. Mặc định, hiệu chuẩn/sửa chữa/đổi lô sẽ **bắt đầu chuỗi quy tắc mới** (2-2s, 4-1s, 10x không đếm xuyên qua sự kiện); bảo trì định kỳ thì không.
 - **Lý do chạy QC** khi nhập kết quả (Thường quy, Sau bảo trì, Sau hiệu chuẩn, Chạy lại sau khắc phục…). App tự gợi ý lý do sau khi bạn ghi sự kiện hoặc sau một lần QC vi phạm.
 - **Gợi ý nguyên nhân và xử trí** (nút 💡) cho từng quy tắc vi phạm, kèm quy trình chung; **ghi hành động khắc phục** (nút ⚑) với các mẫu câu nhanh. Nội dung chỉ mang tính tham khảo, luôn ưu tiên SOP của phòng và hướng dẫn nhà sản xuất.
-- Xuất CSV, sao lưu/nạp JSON, đồng bộ với GitHub.
+- **Xuất Excel (.xlsx)**: nút “Excel” ở từng xét nghiệm hoặc “Xuất tất cả Excel” trong mục Dữ liệu; gồm 4 sheet (Kết quả, Thống kê, Sự kiện, Khai báo). Cũng có CSV và sao lưu/nạp JSON.
+- **Báo cáo in / lưu PDF** (nút “Báo cáo” trên đầu trang): chọn phạm vi (xét nghiệm, thiết bị, toàn phòng) và kỳ (tháng này, tháng trước, 30 ngày, tất cả). Có biểu đồ, thống kê, danh sách vi phạm kèm hành động khắc phục, sự kiện thiết bị và ô ký tên. Bấm “In / Lưu PDF”.
+- **Dùng được trên điện thoại**: giao diện thu gọn (nút ☰ mở danh sách thiết bị), biểu đồ vuốt ngang được, ô nhập chữ lớn. Đồng bộ với máy tính qua GitHub như mô tả bên dưới.
 
 ## Cách dùng khuyến nghị: GitHub miễn phí, nhiều máy
 
@@ -34,3 +36,13 @@ Trên máy cũ: **Dữ liệu / GitHub → Đẩy lên GitHub** (và nên **Tả
 - Token chỉ lưu trong trình duyệt của máy đó. Mỗi người dùng nên có token riêng và được mời làm collaborator của repo dữ liệu; khi cần thu hồi chỉ cần gỡ collaborator hoặc xóa token.
 - `data.json` đi kèm là **dữ liệu mẫu** để thử. Không đưa file này vào repo dữ liệu thật; dùng “Xóa toàn bộ dữ liệu trong trình duyệt” để bắt đầu từ trống.
 - Đổi mean/SD hoặc số lô của một mức sẽ mở chuỗi biểu đồ mới; kết quả cũ vẫn giữ thông số lúc nhập.
+
+## Dùng trên điện thoại và đồng bộ với máy tính
+
+1. Mở địa chỉ GitHub Pages của app trên điện thoại (cùng link với máy tính).
+2. **Dữ liệu / GitHub**: nhập cấu hình repo dữ liệu và token (mỗi thiết bị nhập một lần), bấm **Tải từ GitHub**.
+3. iPhone: Safari → Chia sẻ → “Thêm vào MH chính”. Android: Chrome → ⋮ → “Thêm vào màn hình chính”.
+4. Nhập kết quả trên điện thoại rồi bật “Tự động đẩy” (hoặc bấm Đẩy lên GitHub). Máy tính bàn mở app sẽ tự hỏi cập nhật bản mới.
+5. In PDF trên điện thoại: mở Báo cáo → In / Lưu PDF (iPhone: Chia sẻ → In, rồi chụm hai ngón để xem PDF và lưu).
+
+Lưu ý: token lưu trên điện thoại, nên đặt khóa màn hình; nếu mất máy, thu hồi token trong GitHub. Không nên nhập cùng lúc trên hai thiết bị.
