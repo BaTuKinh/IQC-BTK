@@ -6166,8 +6166,40 @@
    "reason": "Thường quy",
    "note": "",
    "action": ""
+  },
+  {
+   "id": "805fdfo5q3",
+   "testId": "aiuok47wsr",
+   "levelId": "yi5lo0gwsr",
+   "levelName": "Mức 2",
+   "run": "2026-10-20",
+   "ts": 1792495380000,
+   "value": 240,
+   "lot": "1811UN2",
+   "mean": 315,
+   "sd": 31.5,
+   "op": "BTK",
+   "reason": "Thường quy",
+   "note": "",
+   "action": ""
+  },
+  {
+   "id": "h81fsr05q3",
+   "testId": "aiuok47wsr",
+   "levelId": "tfybhq5wam",
+   "levelName": "Mức 3",
+   "run": "2026-10-20",
+   "ts": 1792495380000,
+   "value": 440,
+   "lot": "1446UE3",
+   "mean": 395,
+   "sd": 39.5,
+   "op": "BTK",
+   "reason": "Thường quy",
+   "note": "",
+   "action": ""
   }
  ],
- "updatedAt": 1792408398363,
+ "updatedAt": 1792409033595,
  "events": []
 }
