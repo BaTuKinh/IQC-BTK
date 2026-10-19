@@ -75,6 +75,12 @@ dialog .mf{padding:10px 16px;border-top:1px solid var(--line);display:flex;gap:8
 .notes{font-size:13px;margin:0 0 12px;padding:8px 10px;border:1px solid var(--line);border-left:4px solid var(--ev);border-radius:8px;display:grid;gap:3px}
 .notes .nc{display:inline-block;min-width:26px;text-align:center;font-weight:700;color:var(--ev)}
 #rep .notes{border-color:#ccc;border-left-color:#7a4fd1}
+.tl{fill:var(--ev);font-size:10.5px;font-weight:600;paint-order:stroke;stroke:var(--card);stroke-width:3px;stroke-linejoin:round}
+label.mode{display:flex;gap:8px;align-items:flex-start;border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:8px;cursor:pointer}
+.mode input{width:auto;margin-top:3px}.mode small{display:block;color:var(--mute);font-size:12.5px;font-weight:400;margin-top:2px}
+.logl div{font-size:13px;padding:4px 0;border-bottom:1px solid var(--line)}
+details summary{cursor:pointer}
+input:disabled,select:disabled{opacity:.6;cursor:not-allowed}
 .vctl{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .vctl input[type=date]{min-width:0}
 .ic{display:none}
@@ -174,7 +180,8 @@ const fmt=(x,d=2)=>(x==null||isNaN(x))?'–':Number(x).toFixed(d);
 const pad=n=>String(n).padStart(2,'0');
 const fmtDT=ts=>{const d=new Date(ts);return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`};
 const fmtD=ts=>{const d=new Date(ts);return `${pad(d.getDate())}/${pad(d.getMonth()+1)}`};
-const nowLocal=()=>{const d=new Date();return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`};
+const toLocal=ts=>{const d=new Date(ts);return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`};
+const nowLocal=()=>toLocal(Date.now());
 const typeName={quant:'Định lượng',qual:'Định tính',semi:'Định tính có thang đo'};
 const defaultRules={r12:true,r13:true,r22:true,r4s:true,r41:true,r10x:true};
 const ruleNames={r12:'1-2s (cảnh báo)',r13:'1-3s',r22:'2-2s',r4s:'R-4s',r41:'4-1s',r10x:'10x'};
@@ -222,17 +229,18 @@ const ADV={
 const ADV_GENERAL=['Với vi phạm loại “từ chối” (đỏ): tạm dừng trả kết quả bệnh nhân của xét nghiệm đó trên thiết bị này cho đến khi xử trí xong và QC đạt','Kiểm tra nhanh: đúng mức và đúng lọ QC, hạn dùng, cách bảo quản và trộn; số liệu đã nhập có đúng không','Kiểm tra thuốc thử (hạn dùng, ổn định trên máy, thể tích, bọt khí), tình trạng hiệu chuẩn và cảnh báo lỗi trên máy','Chạy lại QC bằng chính lọ đó; nếu vẫn lỗi thì dùng lọ QC mới','Nếu vẫn lỗi: bảo trì/vệ sinh theo SOP, hiệu chuẩn lại, thay thuốc thử hoặc chất hiệu chuẩn; sau mỗi bước chạy lại QC tất cả các mức','Khi QC đạt: ghi hành động khắc phục và ghi sự kiện (bảo trì, hiệu chuẩn…) vào app, chạy QC với lý do tương ứng','Xem lại kết quả bệnh nhân đã trả từ lần QC đạt gần nhất; cân nhắc chạy lại mẫu và hiệu đính nếu cần','Báo người phụ trách hoặc nhà cung cấp nếu lỗi lặp lại hoặc không xác định được nguyên nhân'];
 const advKey=f=>f.startsWith('2-2s')?'2-2s':f.startsWith('Lệch ')?'step-dev':f==='Sát giới hạn'?'step-near':f.startsWith('4 lần lệch')?'step-trend':f;
 
-let S={version:1,devices:[],tests:[],results:[],events:[]};
+let S={version:1,devices:[],tests:[],results:[],events:[],log:[]};
+const addLog=(t,text)=>{(S.log??=[]).push({id:uid(),ts:Date.now(),testId:t.id,text})};
 let UI={deviceId:null,testId:null,lastN:40,sel:'n40',from:'',to:'',flash:null,showAll:false};
 const T=id=>S.tests.find(t=>t.id===id), D=id=>S.devices.find(d=>d.id===id);
 
 /* ---------- lưu trữ ---------- */
-function loadLocal(){try{const j=localStorage.getItem(LS);if(j){S=JSON.parse(j);S.events??=[];return true}}catch(e){}return false}
+function loadLocal(){try{const j=localStorage.getItem(LS);if(j){S=JSON.parse(j);S.events??=[];S.log??=[];return true}}catch(e){}return false}
 let pushTimer=null;
 function save(){S.updatedAt=Date.now();try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){toast('Không lưu được vào trình duyệt')}
   const c=ghCfg();if(c.auto&&c.token&&c.repo){clearTimeout(pushTimer);pushTimer=setTimeout(()=>ghPush(c).then(()=>toast('Đã đẩy lên GitHub')).catch(e=>toast('Lỗi GitHub: '+e.message)),4000)}}
 function toast(msg){const t=$('#toast');t.textContent=msg;t.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(()=>t.style.display='none',3200)}
-function normalize(d){if(!d||!Array.isArray(d.devices)||!Array.isArray(d.tests)||!Array.isArray(d.results))throw new Error('File không đúng định dạng');d.events??=[];return d}
+function normalize(d){if(!d||!Array.isArray(d.devices)||!Array.isArray(d.tests)||!Array.isArray(d.results))throw new Error('File không đúng định dạng');d.events??=[];d.log??=[];return d}
 
 /* ---------- đánh giá quy tắc ---------- */
 function evalTest(t){
@@ -307,9 +315,12 @@ function marker(x,y,st,title,color){
 }
 function xTicks(items,X,y){
   const n=items.length;if(!n)return'';
-  const step=Math.max(1,Math.ceil(n/(MOB()?5:9)));let s='';
-  items.forEach((p,i)=>{if(i%step===0||i===n-1)s+=`<text x="${X(i)}" y="${y}" class="tk" text-anchor="${i===n-1&&n>1?'end':'middle'}">${fmtD(p.r.ts)}</text>`});
-  return s;
+  const step=Math.max(1,Math.ceil(n/(MOB()?5:9))),idx=[];
+  items.forEach((p,i)=>{if(i%step===0||i===n-1)idx.push(i)});
+  if(idx.length>2&&X(n-1)-X(idx[idx.length-2])<84)idx.splice(idx.length-2,1);
+  const cnt={};idx.forEach(i=>{const k=fmtD(items[i].r.ts);cnt[k]=(cnt[k]||0)+1});
+  return idx.map(i=>{const ts=items[i].r.ts,k=fmtD(ts),d=new Date(ts),lb=cnt[k]>1?`${k} ${pad(d.getHours())}:${pad(d.getMinutes())}`:k;
+    return `<text x="${X(i)}" y="${y}" class="tk" text-anchor="${i===n-1&&n>1?'end':'middle'}">${lb}</text>`}).join('');
 }
 function legend(extra='',sec=false){return `<div class="legend${sec?' sec':''}"><span><i style="background:var(--accent)"></i>Đạt</span><span>▲ Cảnh báo</span><span>■ Vi phạm / ngoài giới hạn</span>${extra}${S.events.length?'<span style="color:var(--ev)">┆ Sự kiện thiết bị (BT bảo trì · HC hiệu chuẩn · SC sửa chữa · TT thuốc thử · LQ lô QC · TS đổi thông số)</span>':''}</div>`}
 const VIEW_OPTS=[['n20','20 điểm gần nhất'],['n40','40 điểm gần nhất'],['n90','90 điểm gần nhất'],['n0','Tất cả'],['today','Hôm nay'],['7','7 ngày gần nhất'],['30','30 ngày gần nhất'],['month','Tháng này'],['prev','Tháng trước'],['day','Một ngày…'],['custom','Khoảng ngày…']];
@@ -338,7 +349,7 @@ function viewControls(){
 }
 const emptyMsg=()=>viewRange()?`<div class="muted">Không có kết quả trong khoảng thời gian đã chọn.</div>`:`<div class="muted">Chưa có kết quả.</div>`;
 
-function evLines(t,ts,X,y1,y2,xmax){
+function evLines(t,ts,X,y1,y2,xmax,tail){
   const n=ts.length;if(!n)return'';let s='';
   const vr=viewRange();
   evFor(t).forEach(e=>{
@@ -346,7 +357,7 @@ function evLines(t,ts,X,y1,y2,xmax){
     const i=ts.findIndex(v=>v>=e.ts);
     if(i===0)return;
     let x;
-    if(i<0){x=X(n-1)+(n>1?(X(1)-X(0))/2:14);if(x>xmax)x=xmax}else x=(X(i-1)+X(i))/2;
+    if(i<0){x=X(n-1)+(tail!=null?tail:(n>1?(X(1)-X(0))/2:14));if(x>xmax)x=xmax}else x=(X(i-1)+X(i))/2;
     const tip=`${EVT[e.type].n} · ${fmtDT(e.ts)}${e.note?' · '+e.note:''}`;
     s+=`<g><line x1="${x}" x2="${x}" y1="${y1}" y2="${y2}" class="evl"/><text x="${x}" y="${y1-2}" class="evt" text-anchor="middle">${EVT[e.type].c}</text><title>${esc(tip)}</title></g>`;
   });
@@ -380,52 +391,56 @@ function pendingChange(t,level,pts,segs){
   return describeParams(t,last,level);
 }
 const tsMark=(x,y1,y2,tip)=>`<g><line x1="${x}" x2="${x}" y1="${y1}" y2="${y2}" class="evl"/><text x="${x}" y="${y1-2}" class="evt" text-anchor="middle">TS</text><title>${esc(tip)}</title></g>`;
+let CPN=0;
 function ljChart(level,pts,t){
-  const M=MOB(),d=t.dec??2,n=pts.length,W=M?420:840,H=M?270:300,L=M?48:64,R=M?38:48,Tp=14,B=M?32:36;
-  const segs=segInfo(t,pts);
-  let lo=Infinity,hi=-Infinity;
-  segs.forEach(s=>{lo=Math.min(lo,s.r.mean-3.6*s.r.sd);hi=Math.max(hi,s.r.mean+3.6*s.r.sd)});
-  pts.forEach(p=>{lo=Math.min(lo,p.r.value-.2*p.r.sd);hi=Math.max(hi,p.r.value+.2*p.r.sd)});
-  const X=i=>n<=1?L+(W-L-R)/2:L+(W-L-R)*i/(n-1),Y=v=>Tp+(H-Tp-B)*(hi-v)/(hi-lo);
+  const M=MOB(),d=t.dec??2,n=pts.length,W=M?420:840,H=M?270:300,L=M?48:64,R=M?38:48,Tp=24,B=M?32:36;
+  const segs=segInfo(t,pts),lastR=pts[n-1].r;
+  const dp=level.mean!==undefined?describeParams(t,lastR,level):'';
+  const tail=M?10:14,stub=dp?(M?34:50):0,XR=W-R-stub;
+  const cur=dp?level:segs[segs.length-1].r;
+  let lo=cur.mean-3.9*cur.sd,hi=cur.mean+3.9*cur.sd;
+  pts.forEach(p=>{lo=Math.min(lo,p.r.value-.25*cur.sd);hi=Math.max(hi,p.r.value+.25*cur.sd)});
+  const X=i=>n<=1?L+(XR-L)/2:L+(XR-L)*i/(n-1),Y=v=>Tp+(H-Tp-B)*(hi-v)/(hi-lo);
   const bx=si=>si<=0?L:(X(segs[si-1].i1)+X(segs[si].i0))/2;
-  const KS=[[3,'l3'],[2,'l2'],[1,'l1'],[0,'l0'],[-1,'l1'],[-2,'l2'],[-3,'l3']];
-  let g='';
-  segs.forEach((s,si)=>{
-    const x0=bx(si),x1=si===segs.length-1?W-R:bx(si+1),m=s.r.mean,sd=s.r.sd;
-    g+=`<rect x="${x0}" y="${Y(m+2*sd)}" width="${x1-x0}" height="${Y(m-2*sd)-Y(m+2*sd)}" class="band"/>`;
-    KS.forEach(([k,c])=>{g+=`<line x1="${x0}" x2="${x1}" y1="${Y(m+k*sd)}" y2="${Y(m+k*sd)}" class="${c}"/>`});
-  });
-  const cur=segs[segs.length-1].r;
+  const sg=segs.map((s,si)=>({m:s.r.mean,sd:s.r.sd,x0:bx(si),x1:si<segs.length-1?bx(si+1):(dp?XR+tail:W-R)}));
+  if(dp)sg.push({m:level.mean,sd:level.sd,x0:XR+tail,x1:W-R});
+  const cid='cp'+(++CPN),KS=[[3,'l3'],[2,'l2'],[1,'l1'],[0,'l0'],[-1,'l1'],[-2,'l2'],[-3,'l3']];
+  let g=`<defs><clipPath id="${cid}"><rect x="${L}" y="${Tp}" width="${W-L-R}" height="${H-Tp-B}"/></clipPath></defs><g clip-path="url(#${cid})">`;
+  sg.forEach(s=>{g+=`<rect x="${s.x0}" y="${Y(s.m+2*s.sd)}" width="${s.x1-s.x0}" height="${Y(s.m-2*s.sd)-Y(s.m+2*s.sd)}" class="band"/>`});
+  KS.forEach(([k,c])=>{g+=`<path fill="none" class="${c}" d="${sg.map((s,i)=>`${i?'L':'M'}${s.x0} ${Y(s.m+k*s.sd)}L${s.x1} ${Y(s.m+k*s.sd)}`).join('')}"/>`});
+  g+='</g>';
   KS.forEach(([k])=>{const y=Y(cur.mean+k*cur.sd);
     g+=`<text x="${L-6}" y="${y+4}" class="tk" text-anchor="end">${fmt(cur.mean+k*cur.sd,d)}</text><text x="${W-R+6}" y="${y+4}" class="tk">${k===0?'TB':(k>0?'+':'')+k+'SD'}</text>`});
+  if(sg.length>1)sg.forEach(s=>{if(s.x1-s.x0>=(M?84:120))g+=`<text x="${s.x0+5}" y="${Tp-13}" class="tl">TB ${fmt(s.m,d)} · SD ${fmt(s.sd,d)}</text>`});
   if(n>1)g+=`<path class="ln" d="${pts.map((p,i)=>(i?'L':'M')+X(i)+' '+Y(p.r.value)).join('')}"/>`;
-  g+=evLines(t,pts.map(p=>p.r.ts),X,Tp,H-B,W-R-4);
+  g+=evLines(t,pts.map(p=>p.r.ts),X,Tp,H-B,W-R-4,dp?tail:null);
   segs.forEach((s,si)=>{if(si&&!s.cov)g+=tsMark(bx(si),Tp,H-B,`${fmtDT(pts[s.i0].r.ts)} · Đổi thông số: ${s.text}`)});
   const pc=pendingChange(t,level,pts,segs);
-  if(pc)g+=tsMark(W-R-4,Tp,H-B,`Thông số hiện tại đã đổi (${pc}), áp dụng từ kết quả tiếp theo`);
+  if(pc)g+=tsMark(XR+tail,Tp,H-B,`Thông số hiện tại đã đổi (${pc}), áp dụng từ kết quả tiếp theo`);
   pts.forEach((p,i)=>{const z=p.o.z;g+=marker(X(i),Y(p.r.value),p.o.status,`${fmtDT(p.r.ts)} | ${fmt(p.r.value,d)} ${t.unit||''} | z=${fmt(z,2)}${p.o.flags.length?' | '+p.o.flags.join(', '):''}`)});
   g+=xTicks(pts,X,H-12);
   return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Biểu đồ Levey-Jennings ${esc(level.name)}">${g}</svg>`;
 }
 function zChart(t,levelSeries){
   const M=MOB(),W=M?420:840,H=M?270:300,L=M?40:64,R=M?38:48,Tp=14,B=M?32:36;
-  const runs=[...new Set(levelSeries.flatMap(ls=>ls.pts.map(p=>p.r.run)))].sort().slice(!viewRange()&&UI.lastN>0?-UI.lastN:0);
-  const n=runs.length;if(!n)return'';
-  let lim=4;levelSeries.forEach(ls=>ls.pts.forEach(p=>{if(runs.includes(p.r.run))lim=Math.max(lim,Math.ceil(Math.abs(p.o.z)+.3))}));
+  const tk=p=>Math.floor(p.r.ts/6e4);
+  const keys=[...new Set(levelSeries.flatMap(ls=>ls.pts.map(tk)))].sort((a,b)=>a-b).slice(!viewRange()&&UI.lastN>0?-UI.lastN:0);
+  const n=keys.length;if(!n)return'';
+  const pos=new Map(keys.map((k,i)=>[k,i]));
+  let lim=4;levelSeries.forEach(ls=>ls.pts.forEach(p=>{if(pos.has(tk(p)))lim=Math.max(lim,Math.ceil(Math.abs(p.o.z)+.3))}));
   const X=i=>n<=1?L+(W-L-R)/2:L+(W-L-R)*i/(n-1),Y=v=>Tp+(H-Tp-B)*(lim-v)/(2*lim);
   let g=`<rect x="${L}" y="${Y(2)}" width="${W-L-R}" height="${Y(-2)-Y(2)}" class="band"/>`;
   [[3,'l3'],[2,'l2'],[1,'l1'],[0,'l0'],[-1,'l1'],[-2,'l2'],[-3,'l3']].forEach(([k,c])=>{const y=Y(k);
     g+=`<line x1="${L}" x2="${W-R}" y1="${y}" y2="${y}" class="${c}"/><text x="${L-6}" y="${y+4}" class="tk" text-anchor="end">${k>0?'+':''}${k}</text>`});
   g+=`<text x="${W-R+6}" y="${Y(0)+4}" class="tk">z (SD)</text>`;
-  g+=evLines(t,runs.map(r=>new Date(r+'T12:00').getTime()),X,Tp,H-B,W-R-4);
+  g+=evLines(t,keys.map(k=>k*6e4),X,Tp,H-B,W-R-4);
   levelSeries.forEach((ls,li)=>{
     const col=PALETTE[li%PALETTE.length];
-    const pp=ls.pts.filter(p=>runs.includes(p.r.run)).map(p=>({x:X(runs.indexOf(p.r.run)),y:Y(p.o.z),p}));
+    const pp=ls.pts.filter(p=>pos.has(tk(p))).map(p=>({x:X(pos.get(tk(p))),y:Y(p.o.z),p}));
     if(pp.length>1)g+=`<path fill="none" stroke="${col}" stroke-width="1.5" opacity=".8" d="${pp.map((q,i)=>(i?'L':'M')+q.x+' '+q.y).join('')}"/>`;
     pp.forEach(q=>{g+=marker(q.x,q.y,q.p.o.status,`${ls.level.name} | ${fmtDT(q.p.r.ts)} | z=${fmt(q.p.o.z,2)}${q.p.o.flags.length?' | '+q.p.o.flags.join(', '):''}`,col)});
   });
-  const dates=runs.map(r=>({r:{ts:new Date(r+'T12:00').getTime()}}));
-  g+=xTicks(dates,X,H-12);
+  g+=xTicks(keys.map(k=>({r:{ts:k*6e4}})),X,H-12);
   const lg=levelSeries.map((ls,i)=>`<span><i style="background:${PALETTE[i%PALETTE.length]}"></i>${esc(ls.level.name)}</span>`).join('');
   return legend(lg)+`<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Biểu đồ z-score nhiều mức">${g}</svg>`;
 }
@@ -473,7 +488,7 @@ function renderMain(){
   }
   const dev=D(t.deviceId),d=t.dec??2,{res,out}=evalTest(t);
   let h=`<div class="card"><div class="head"><h2>${esc(t.name)}</h2><span class="badge">${typeName[t.type]}</span><span class="muted">${esc(dev?.name||'')}${t.unit?' · '+esc(t.unit):''}${t.tea&&t.tea.value>0?` · TEa ${t.tea.value}${t.tea.kind==='pct'?'%':' '+esc(t.unit||'')}`:''}</span><span class="spacer"></span>
-  <button data-act="newEvent" data-id="${t.id}">＋ Sự kiện</button><button data-act="editTest" data-id="${t.id}">Khai báo</button><button data-act="csv" data-id="${t.id}">CSV</button><button data-act="xlsx" data-id="${t.id}">Excel</button><button class="danger" data-act="delTest" data-id="${t.id}">Xóa</button></div>${sumHTML(t,res,out)}${entryHTML(t)}</div>`;
+  <button data-act="newEvent" data-id="${t.id}">＋ Sự kiện</button><button data-act="editParams" data-id="${t.id}">Mean/SD/TEa</button><button data-act="editTest" data-id="${t.id}">Khai báo</button><button data-act="csv" data-id="${t.id}">CSV</button><button data-act="xlsx" data-id="${t.id}">Excel</button><button class="danger" data-act="delTest" data-id="${t.id}">Xóa</button></div>${sumHTML(t,res,out)}${entryHTML(t)}</div>`;
   if(UI.flash){h+=UI.flash;UI.flash=null}
   else if(res.length){
     const last=res[res.length-1].run;
@@ -500,7 +515,7 @@ function renderMain(){
     h+='</div>';
     h+=statsHTML(t,res,out);
   }
-  h+=tableHTML(t,res,out);
+  h+=tableHTML(t,res,out)+logHTML(t);
   $('#main').innerHTML=wrapSvg(h);
 }
 function notesHTML(t,series){
@@ -591,14 +606,20 @@ function tableHTML(t,res,out){
   const shown=UI.showAll?items:items.slice(0,40);
   const rows=shown.map(it=>{
     if(it.k==='e'){const e=it.e,ev=EVT[e.type];
-      return `<tr class="evrow"><td class="ctime">${fmtDT(e.ts)}</td><td colspan="5" class="ctxt"><b>${ev.c}</b> <b>${esc(ev.n)}</b>${e.testId?'':' <small class="muted">(toàn thiết bị)</small>'}${e.note?' — '+esc(e.note):''}${e.op?` <small class="muted">· ${esc(e.op)}</small>`:''}${e.reset?' <small class="muted">· bắt đầu chuỗi quy tắc mới</small>':''}</td><td class="cact"><button class="sm danger" data-act="delEvt" data-id="${e.id}" title="Xóa sự kiện">✕</button></td></tr>`}
+      return `<tr class="evrow"><td class="ctime">${fmtDT(e.ts)}</td><td colspan="5" class="ctxt"><b>${ev.c}</b> <b>${esc(ev.n)}</b>${e.testId?'':' <small class="muted">(toàn thiết bị)</small>'}${e.note?' — '+esc(e.note):''}${e.op?` <small class="muted">· ${esc(e.op)}</small>`:''}${e.reset?' <small class="muted">· bắt đầu chuỗi quy tắc mới</small>':''}</td><td class="cact"><button class="sm" data-act="editEvt" data-id="${e.id}" title="Sửa sự kiện">✎</button> <button class="sm danger" data-act="delEvt" data-id="${e.id}" title="Xóa sự kiện">✕</button></td></tr>`}
     const r=it.r,o=out[r.id]||{flags:[],status:'ok'};
     const dv=t.type==='quant'?`${fmt(r.value,d)} <small class="muted">z ${fmt(o.z,2)}</small>`:`${esc(r.value)} <small class="muted">${t.type==='semi'?'lệch '+(o.dev>0?'+':'')+o.dev:''}</small>`;
     const stl={ok:'Đạt',warn:'Cảnh báo',fail:'Vi phạm'}[o.status];
     const rb=r.reason&&r.reason!=='Thường quy'?`<br><span class="badge">${esc(r.reason)}</span>`:'';
     const fl=o.flags.join(', ');
-    return `<tr class="rr ${o.status}"><td class="ctime">${fmtDT(r.ts)}${rb}</td><td class="clv">${esc(r.levelName)}${r.lot?`<br><small class="muted">lô ${esc(r.lot)}</small>`:''}</td><td class="cval">${dv}</td><td class="cst"><span class="badge ${o.status}">${stl}</span><span class="fl"> ${esc(fl)}</span></td><td class="cop">${esc(r.op||'')}</td><td class="cnote">${esc(r.note||'')}${r.action?`<br><small><b>Khắc phục:</b> ${esc(r.action)}</small>`:''}</td><td class="cact" style="white-space:nowrap">${o.status!=='ok'?`<button class="sm" data-act="advice" data-id="${r.id}" title="Gợi ý nguyên nhân & xử trí">💡</button> <button class="sm" data-act="action" data-id="${r.id}" title="Ghi hành động khắc phục">⚑</button> `:''}<button class="sm danger" data-act="delRes" data-id="${r.id}" title="Xóa">✕</button></td><td class="cfl">${esc(fl)}</td></tr>`}).join('');
+    return `<tr class="rr ${o.status}"><td class="ctime">${fmtDT(r.ts)}${rb}</td><td class="clv">${esc(r.levelName)}${r.lot?`<br><small class="muted">lô ${esc(r.lot)}</small>`:''}</td><td class="cval">${dv}</td><td class="cst"><span class="badge ${o.status}">${stl}</span><span class="fl"> ${esc(fl)}</span></td><td class="cop">${esc(r.op||'')}</td><td class="cnote">${esc(r.note||'')}${r.action?`<br><small><b>Khắc phục:</b> ${esc(r.action)}</small>`:''}</td><td class="cact" style="white-space:nowrap">${o.status!=='ok'?`<button class="sm" data-act="advice" data-id="${r.id}" title="Gợi ý nguyên nhân & xử trí">💡</button> <button class="sm" data-act="action" data-id="${r.id}" title="Ghi hành động khắc phục">⚑</button> `:''}<button class="sm" data-act="editRes" data-id="${r.id}" title="Sửa kết quả">✎</button> <button class="sm danger" data-act="delRes" data-id="${r.id}" title="Xóa">✕</button></td><td class="cfl">${esc(fl)}</td></tr>`}).join('');
   return `<div class="card"><h2>Kết quả và sự kiện thiết bị (${items.filter(i=>i.k==='r').length} kết quả${vr?' · '+esc(vr.label):''})</h2>${items.length?`<div class="scroll"><table class="m rt"><tr class="hd"><th>Thời gian</th><th>Mức</th><th>Kết quả</th><th>Đánh giá</th><th>Người TH</th><th>Ghi chú</th><th></th></tr>${rows}</table></div>${items.length>40?`<p><button class="sm" data-act="toggleAll">${UI.showAll?'Thu gọn':'Xem tất cả'}</button></p>`:''}`:'<div class="muted">Chưa có dữ liệu.</div>'}</div>`;
+}
+
+function logHTML(t){
+  const L=(S.log||[]).filter(l=>l.testId===t.id).sort((a,b)=>b.ts-a.ts);
+  if(!L.length)return'';
+  return `<div class="card"><details><summary><b>Nhật ký chỉnh sửa (${L.length})</b> <small class="muted">sửa kết quả, sửa thông số</small></summary><div class="logl">${L.slice(0,80).map(l=>`<div><span class="muted">${fmtDT(l.ts)}</span> · ${esc(l.text)}</div>`).join('')}</div></details></div>`;
 }
 
 /* ---------- nhập kết quả ---------- */
@@ -643,7 +664,7 @@ function editDevice(id){
     const n=S.tests.filter(t=>t.deviceId===id).length;
     if(!confirm(`Xóa thiết bị “${d.name}” cùng ${n} xét nghiệm và toàn bộ kết quả của chúng?`))return;
     const ids=new Set(S.tests.filter(t=>t.deviceId===id).map(t=>t.id));
-    S.results=S.results.filter(r=>!ids.has(r.testId));S.events=S.events.filter(e=>e.deviceId!==id);S.tests=S.tests.filter(t=>t.deviceId!==id);S.devices=S.devices.filter(x=>x.id!==id);
+    S.results=S.results.filter(r=>!ids.has(r.testId));S.log=(S.log||[]).filter(l=>!ids.has(l.testId));S.events=S.events.filter(e=>e.deviceId!==id);S.tests=S.tests.filter(t=>t.deviceId!==id);S.devices=S.devices.filter(x=>x.id!==id);
     if(ids.has(UI.testId))UI.testId=null;save();render();$('#m').close();
   };
 }
@@ -652,6 +673,7 @@ function editTest(id,deviceId){
   const t=id?structuredClone(T(id)):{id:uid(),deviceId:deviceId||UI.deviceId||S.devices[0]?.id,name:'',type:'quant',unit:'',dec:2,tea:{kind:'pct',value:''},rules:{...defaultRules},scale:['Âm tính','Dương tính'],levels:[{id:uid(),name:'Mức 1',lot:'',mean:'',sd:'',expected:'',tol:0}]};
   const hasRes=id&&S.results.some(r=>r.testId===id),old=id?structuredClone(T(id)):null;
   let chgReason='';
+  const dz=l=>hasRes&&S.results.some(r=>r.testId===id&&r.levelId===l.id)?'disabled':'';
   const readForm=()=>{
     const fr=$('#fr');if(fr)chgReason=fr.value;
     t.deviceId=$('#fd').value;t.name=$('#fn').value;t.type=$('#ft').value;
@@ -664,12 +686,12 @@ function editTest(id,deviceId){
   };
   const draw=()=>{
     const q=t.type==='quant';
-    const lv=t.levels.map((l,i)=>`<tr><td><input id="ln${i}" value="${esc(l.name)}"></td><td><input id="ll${i}" value="${esc(l.lot)}" placeholder="tuỳ chọn"></td>${q?`<td><input id="lm${i}" inputmode="decimal" value="${esc(l.mean)}"></td><td><input id="lsd${i}" inputmode="decimal" value="${esc(l.sd)}"></td>`:`<td><select id="le${i}">${t.scale.map(s=>`<option ${s===l.expected?'selected':''}>${esc(s)}</option>`).join('')}</select></td>${t.type==='semi'?`<td><input id="lt${i}" inputmode="numeric" value="${esc(l.tol??0)}" style="width:70px"></td>`:''}`}<td><button class="sm danger" data-del="${i}" type="button">✕</button></td></tr>`).join('');
+    const lv=t.levels.map((l,i)=>`<tr><td><input id="ln${i}" value="${esc(l.name)}"></td><td><input id="ll${i}" value="${esc(l.lot)}" placeholder="tuỳ chọn" ${dz(l)}></td>${q?`<td><input id="lm${i}" inputmode="decimal" value="${esc(l.mean)}" ${dz(l)}></td><td><input id="lsd${i}" inputmode="decimal" value="${esc(l.sd)}" ${dz(l)}></td>`:`<td><select id="le${i}" ${dz(l)}>${t.scale.map(s=>`<option ${s===l.expected?'selected':''}>${esc(s)}</option>`).join('')}</select></td>${t.type==='semi'?`<td><input id="lt${i}" inputmode="numeric" value="${esc(l.tol??0)}" style="width:70px" ${dz(l)}></td>`:''}`}<td><button class="sm danger" data-del="${i}" type="button">✕</button></td></tr>`).join('');
     $('#mb').innerHTML=`<div class="row"><label class="fld"><span>Thiết bị *</span><select id="fd">${S.devices.map(d=>`<option value="${d.id}" ${d.id===t.deviceId?'selected':''}>${esc(d.name)}</option>`).join('')}</select></label><label class="fld" style="flex:2 1 220px"><span>Tên xét nghiệm *</span><input id="fn" value="${esc(t.name)}"></label><label class="fld"><span>Loại</span><select id="ft" ${hasRes?'disabled':''}>${Object.entries(typeName).map(([k,v])=>`<option value="${k}" ${k===t.type?'selected':''}>${v}</option>`).join('')}</select></label></div>
-    ${q?`<div class="row" style="margin-top:10px"><label class="fld"><span>Đơn vị</span><input id="fu" value="${esc(t.unit)}" placeholder="mg/dL"></label><label class="fld"><span>Số chữ số thập phân</span><input id="fdec" inputmode="numeric" value="${esc(t.dec)}"></label><label class="fld"><span>TEa (nếu có)</span><div style="display:flex;gap:6px"><input id="fv" inputmode="decimal" value="${esc(t.tea?.value)}" placeholder="vd 10"><select id="fk" style="width:90px"><option value="pct" ${t.tea?.kind==='pct'?'selected':''}>%</option><option value="abs" ${t.tea?.kind==='abs'?'selected':''}>đơn vị</option></select></div></label></div>
+    ${q?`<div class="row" style="margin-top:10px"><label class="fld"><span>Đơn vị</span><input id="fu" value="${esc(t.unit)}" placeholder="mg/dL"></label><label class="fld"><span>Số chữ số thập phân</span><input id="fdec" inputmode="numeric" value="${esc(t.dec)}"></label><label class="fld"><span>TEa (nếu có)</span><div style="display:flex;gap:6px"><input id="fv" inputmode="decimal" value="${esc(t.tea?.value)}" placeholder="vd 10" ${hasRes?'disabled':''}><select id="fk" style="width:90px" ${hasRes?'disabled':''}><option value="pct" ${t.tea?.kind==='pct'?'selected':''}>%</option><option value="abs" ${t.tea?.kind==='abs'?'selected':''}>đơn vị</option></select></div></label></div>
     <p style="margin:12px 0 4px;font-size:13px" class="muted">Quy tắc Westgard áp dụng</p><div class="chk">${Object.entries(ruleNames).map(([k,v])=>`<label><input type="checkbox" id="r_${k}" ${t.rules[k]!==false?'checked':''}>${v}</label>`).join('')}</div>`
     :`<label class="fld" style="margin-top:10px"><span>Thang kết quả, sắp xếp từ thấp đến cao, cách nhau bằng dấu phẩy</span><input id="fs" value="${esc(t.scale.join(', '))}" placeholder="Âm tính, ±, 1+, 2+, 3+"></label>`}
-    <p style="margin:14px 0 4px;font-size:13px" class="muted">Các mức nội kiểm</p><div class="scroll"><table><tr><th>Tên mức</th><th>Số lô</th>${q?'<th>Mean</th><th>SD</th>':`<th>Kết quả mong đợi</th>${t.type==='semi'?'<th>Sai lệch cho phép (bậc)</th>':''}`}<th></th></tr>${lv}</table></div><p><button type="button" id="addLv" class="sm">＋ Thêm mức</button></p>${hasRes?`<label class="fld" style="margin-top:6px"><span>Lý do thay đổi (ghi chú lên biểu đồ nếu bạn đổi mean, SD, lô…)</span><input id="fr" value="${esc(chgReason)}" placeholder="vd: đổi lô QC, tính lại SD sau 20 điểm"></label><small class="muted">Kết quả cũ giữ nguyên thông số lúc nhập. Biểu đồ vẫn hiện đủ, vạch giới hạn đổi tại điểm thay đổi và có ghi chú “TS”.</small>`:''}`;
+    <p style="margin:14px 0 4px;font-size:13px" class="muted">Các mức nội kiểm</p><div class="scroll"><table><tr><th>Tên mức</th><th>Số lô</th>${q?'<th>Mean</th><th>SD</th>':`<th>Kết quả mong đợi</th>${t.type==='semi'?'<th>Sai lệch cho phép (bậc)</th>':''}`}<th></th></tr>${lv}</table></div><p><button type="button" id="addLv" class="sm">＋ Thêm mức</button></p>${hasRes?`<div class="alert" style="margin-top:8px;font-size:13px">Mean, SD, số lô, kết quả mong đợi và TEa của mức đã có kết quả được khóa ở đây. Muốn sửa, bấm nút <b>Mean/SD/TEa</b> trên đầu xét nghiệm: ở đó chọn “Sửa lại cho đúng” (áp dụng cả kết quả cũ) hoặc “Thông số mới từ bây giờ” (đổi lô, tính lại mean/SD).</div>`:''}`;
     $('#ft').onchange=()=>{readForm();if(t.type!=='quant'&&!t.scale.length)t.scale=['Âm tính','Dương tính'];t.levels.forEach(l=>{if(t.type!=='quant'&&!t.scale.includes(l.expected))l.expected=t.scale[0]});draw()};
     const fs=$('#fs');if(fs)fs.onchange=()=>{readForm();t.levels.forEach(l=>{if(!t.scale.includes(l.expected))l.expected=t.scale[0]});draw()};
     $('#addLv').onclick=()=>{readForm();t.levels.push({id:uid(),name:'Mức '+(t.levels.length+1),lot:'',mean:'',sd:'',expected:t.scale[0]||'',tol:0});draw()};
@@ -689,7 +711,7 @@ function editTest(id,deviceId){
     if(t.type==='quant'){const v=num(t.tea.value);t.tea={kind:t.tea.kind,value:isNaN(v)?0:v};delete t.scale}else{delete t.unit;delete t.tea;delete t.rules}
     const ch=hasRes?diffTest(old,t):[];
     if(id){S.tests[S.tests.findIndex(x=>x.id===id)]=t}else S.tests.push(t);
-    if(ch.length)S.events.push({id:uid(),deviceId:t.deviceId,testId:t.id,ts:Date.now(),type:'param',op:'',note:ch.join('; ')+(chgReason.trim()?' — '+chgReason.trim():''),reset:false});
+    if(ch.length)addLog(t,'Khai báo: '+ch.join('; '));
     UI.testId=t.id;UI.deviceId=t.deviceId;document.body.classList.remove('menu');save();render();
   });
   draw();
@@ -717,13 +739,13 @@ function dataDialog(){
   $('#gPush').onclick=async()=>{const c=rd();if(!c.repo||!c.token)return toast('Cần nhập repo và token');toast('Đang đẩy…');try{try{await ghPush(c)}catch(e){if(e.code==='CONFLICT'&&confirm(e.message+'\n\nVẫn ghi đè dữ liệu trên GitHub bằng dữ liệu của máy này?'))await ghPush(c,true);else throw e}toast('Đã đẩy lên GitHub')}catch(e){toast('Lỗi GitHub: '+e.message)}};
   $('#gPull').onclick=async()=>{const c=rd();if(!c.repo)return toast('Cần nhập repo');if(!confirm('Thay dữ liệu hiện tại bằng bản trên GitHub?'))return;toast('Đang tải…');try{S=normalize(await ghPull(c));setSync(S.updatedAt||0);localStorage.setItem(LS,JSON.stringify(S));UI.testId=S.tests[0]?.id||null;render();$('#m').close();toast('Đã tải từ GitHub')}catch(e){toast('Lỗi GitHub: '+e.message)}};
   $('#ga').onchange=rd;
-  $('#bClr').onclick=()=>{if(confirm('Xóa TOÀN BỘ thiết bị, xét nghiệm, kết quả trong trình duyệt này? (không ảnh hưởng bản trên GitHub)')){S={version:1,devices:[],tests:[],results:[],events:[]};UI.testId=null;save();render();$('#m').close()}};
+  $('#bClr').onclick=()=>{if(confirm('Xóa TOÀN BỘ thiết bị, xét nghiệm, kết quả trong trình duyệt này? (không ảnh hưởng bản trên GitHub)')){S={version:1,devices:[],tests:[],results:[],events:[],log:[]};UI.testId=null;save();render();$('#m').close()}};
 }
 
 /* ---------- gợi ý, hành động khắc phục, sự kiện ---------- */
 function defaultReason(t){
   const {res,out}=evalTest(t),last=res[res.length-1];
-  const ev=evFor(t).filter(e=>e.type!=='other'&&(!last||e.ts>last.ts)).pop();
+  const ev=evFor(t).filter(e=>e.type!=='other'&&e.type!=='param'&&(!last||e.ts>last.ts)).pop();
   if(ev)return{maint:'Sau bảo trì',calib:'Sau hiệu chuẩn',service:'Sau sửa chữa / thay linh kiện',reagent:'Đổi lô thuốc thử',qclot:'Đổi lô vật liệu QC'}[ev.type];
   if(last&&out[last.id]&&out[last.id].status==='fail')return'Chạy lại sau khắc phục';
   return'Thường quy';
@@ -742,18 +764,89 @@ function editAction(id){
   modal('Hành động khắc phục',`<p class="muted">${esc(r.levelName)} · ${fmtDT(r.ts)}</p><textarea id="act" rows="4">${esc(r.action||'')}</textarea><div class="row" style="margin-top:8px">${quick.map(q=>`<button type="button" class="sm" data-q="${esc(q)}" style="flex:0 0 auto">${esc(q)}</button>`).join('')}</div><p class="muted" style="font-size:13px">Sau khi xử trí, chạy lại QC và chọn lý do “Chạy lại sau khắc phục” (hoặc ghi thêm sự kiện bảo trì/hiệu chuẩn bằng nút ＋ Sự kiện).</p>`,()=>{r.action=$('#act').value.trim();save();render()});
   $('#mb').querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>{const a=$('#act');a.value=(a.value.trim()?a.value.trim().replace(/[.;]+$/,'')+'; ':'')+b.dataset.q});
 }
-function editEvent(testId){
-  const t=T(testId),dev=D(t.deviceId);
-  modal('Ghi sự kiện thiết bị',`<div class="row"><label class="fld"><span>Loại sự kiện</span><select id="et">${Object.entries(EVT).map(([k,v])=>`<option value="${k}">${v.n}</option>`).join('')}</select></label><label class="fld"><span>Ngày giờ hoàn tất</span><input type="datetime-local" id="ed" value="${nowLocal()}"></label></div>
-  <div class="row" style="margin-top:10px"><label class="fld"><span>Áp dụng cho</span><select id="es"><option value="dev">Tất cả xét nghiệm của ${esc(dev.name)}</option><option value="test">Chỉ ${esc(t.name)}</option></select></label><label class="fld"><span>Người thực hiện</span><input id="eo"></label></div>
-  <label class="fld" style="margin-top:10px"><span>Nội dung (vd: thay đèn halogen, bảo dưỡng 3 tháng, hiệu chuẩn bằng calibrator lô…)</span><textarea id="en" rows="3"></textarea></label>
+function editEvent(testId,evId){
+  const t=T(testId),dev=D(t.deviceId),e=evId?S.events.find(x=>x.id===evId):null;
+  modal(e?'Sửa sự kiện thiết bị':'Ghi sự kiện thiết bị',`<div class="row"><label class="fld"><span>Loại sự kiện</span><select id="et">${Object.entries(EVT).map(([k,v])=>`<option value="${k}" ${e&&e.type===k?'selected':''}>${v.n}</option>`).join('')}</select></label><label class="fld"><span>Ngày giờ hoàn tất</span><input type="datetime-local" id="ed" value="${e?toLocal(e.ts):nowLocal()}"></label></div>
+  <div class="row" style="margin-top:10px"><label class="fld"><span>Áp dụng cho</span><select id="es"><option value="dev">Tất cả xét nghiệm của ${esc(dev.name)}</option><option value="test" ${e&&e.testId?'selected':''}>Chỉ ${esc(t.name)}</option></select></label><label class="fld"><span>Người thực hiện</span><input id="eo" value="${esc(e?.op||'')}"></label></div>
+  <label class="fld" style="margin-top:10px"><span>Nội dung (vd: thay đèn halogen, bảo dưỡng 3 tháng, hiệu chuẩn bằng calibrator lô…)</span><textarea id="en" rows="3">${esc(e?.note||'')}</textarea></label>
   <div class="chk" style="margin-top:10px"><label><input type="checkbox" id="er">Tính lại chuỗi quy tắc 2-2s / 4-1s / 10x từ sự kiện này</label></div>
   <p class="muted" style="font-size:13px">Sự kiện hiện thành vạch đứng trên biểu đồ và nằm xen trong bảng kết quả. Sau sự kiện, chạy lại QC: app tự gợi ý lý do “Sau bảo trì / hiệu chuẩn…”.</p>`,()=>{
     const ts=new Date($('#ed').value).getTime();if(isNaN(ts))return merr('Chọn ngày giờ');
-    S.events.push({id:uid(),deviceId:t.deviceId,testId:$('#es').value==='test'?t.id:null,ts,type:$('#et').value,op:$('#eo').value.trim(),note:$('#en').value.trim(),reset:$('#er').checked});
-    save();render();toast('Đã ghi sự kiện');
+    const o={deviceId:t.deviceId,testId:$('#es').value==='test'?t.id:null,ts,type:$('#et').value,op:$('#eo').value.trim(),note:$('#en').value.trim(),reset:$('#er').checked};
+    if(e){Object.assign(e,o);addLog(t,`Sửa sự kiện ${EVT[e.type].c} ${fmtDT(e.ts)}`)}else S.events.push({id:uid(),...o});
+    save();render();toast(e?'Đã cập nhật sự kiện':'Đã ghi sự kiện');
   });
-  const sync=()=>{$('#er').checked=EVT[$('#et').value].reset};$('#et').onchange=sync;sync();
+  const sync=()=>{$('#er').checked=EVT[$('#et').value].reset};$('#et').onchange=sync;if(e)$('#er').checked=!!e.reset;else sync();
+}
+
+function editResult(id){
+  const r=S.results.find(x=>x.id===id),t=T(r.testId),q=t.type==='quant',d=t.dec??2;
+  const sib=S.results.filter(x=>x.testId===r.testId&&x.ts===r.ts&&x.id!==r.id);
+  const val=q?`<input id="rv" inputmode="decimal" value="${esc(r.value)}">`:`<select id="rv">${t.scale.map(s=>`<option ${s===r.value?'selected':''}>${esc(s)}</option>`).join('')}${t.scale.includes(r.value)?'':`<option selected>${esc(r.value)}</option>`}</select>`;
+  const par=q?`Mean ${fmt(r.mean,d)} · SD ${fmt(r.sd,d)}`:`mục tiêu ${esc(r.expected)}${t.type==='semi'?` (±${r.tol||0} bậc)`:''}`;
+  const rs=REASONS.includes(r.reason)||!r.reason?REASONS:[...REASONS,r.reason];
+  modal('Sửa kết quả nội kiểm',`<p class="muted" style="margin-top:0"><b>${esc(r.levelName)}</b>${r.lot?' · lô '+esc(r.lot):''} · thông số lúc nhập: ${par}<br><small>Muốn đổi mean/SD/TEa, dùng nút “Mean/SD/TEa” của xét nghiệm.</small></p>
+  <div class="row"><label class="fld"><span>Kết quả${q&&t.unit?' ('+esc(t.unit)+')':''}</span>${val}</label><label class="fld"><span>Ngày giờ</span><input type="datetime-local" id="rd" value="${toLocal(r.ts)}"></label></div>
+  ${sib.length?`<div class="chk" style="margin-top:6px"><label><input type="checkbox" id="rsib" checked>Đổi giờ cho cả ${sib.length} mức khác trong cùng lần chạy</label></div>`:''}
+  <div class="row" style="margin-top:10px"><label class="fld"><span>Lý do chạy QC</span><select id="rr">${rs.map(x=>`<option ${x===(r.reason||'Thường quy')?'selected':''}>${esc(x)}</option>`).join('')}</select></label><label class="fld"><span>Người thực hiện</span><input id="ro" value="${esc(r.op||'')}"></label></div>
+  <label class="fld" style="margin-top:10px"><span>Ghi chú</span><input id="rn" value="${esc(r.note||'')}"></label>
+  <label class="fld" style="margin-top:10px"><span>Hành động khắc phục</span><textarea id="ra" rows="2">${esc(r.action||'')}</textarea></label>
+  <label class="fld" style="margin-top:10px"><span>Lý do sửa (ghi vào nhật ký, không bắt buộc)</span><input id="rl" placeholder="vd: gõ nhầm số"></label>`,()=>{
+    let v=$('#rv').value;if(q){v=num(v);if(isNaN(v))return merr('Giá trị không hợp lệ')}
+    const dv=$('#rd').value,ts=new Date(dv).getTime();if(!dv||isNaN(ts))return merr('Chọn ngày giờ');
+    const ch=[],oldTs=r.ts,why=$('#rl').value.trim(),nr=$('#rr').value,no=$('#ro').value.trim(),nn=$('#rn').value.trim(),na=$('#ra').value.trim();
+    if(String(v)!==String(r.value))ch.push(`kết quả ${r.value} → ${v}`);
+    if(ts!==r.ts)ch.push(`giờ ${fmtDT(r.ts)} → ${fmtDT(ts)}`);
+    if(nr!==(r.reason||'Thường quy'))ch.push('lý do chạy QC');
+    if(no!==(r.op||''))ch.push('người thực hiện');
+    if(nn!==(r.note||''))ch.push('ghi chú');
+    if(na!==(r.action||''))ch.push('hành động khắc phục');
+    if(!ch.length)return true;
+    r.value=v;r.reason=nr;r.op=no;r.note=nn;r.action=na;
+    const mv=ts!==oldTs?(($('#rsib')&&$('#rsib').checked)?[r,...sib]:[r]):[];
+    mv.forEach(x=>{x.ts=ts;x.run=dv.slice(0,10)});
+    addLog(t,`Sửa KQ ${r.levelName} (${fmtDT(oldTs)}): ${ch.join('; ')}${why?' — '+why:''}`);
+    save();render();toast('Đã cập nhật kết quả');
+  });
+}
+
+function editParams(id){
+  const t0=T(id),q=t0.type==='quant',hasRes=S.results.some(r=>r.testId===id);
+  const lv=t0.levels.map((l,i)=>`<tr><td><b>${esc(l.name)}</b></td><td><input id="pl${i}" value="${esc(l.lot||'')}" placeholder="tuỳ chọn"></td>${q?`<td><input id="pm${i}" inputmode="decimal" value="${esc(l.mean)}"></td><td><input id="ps${i}" inputmode="decimal" value="${esc(l.sd)}"></td>`:`<td><select id="pe${i}">${t0.scale.map(s=>`<option ${s===l.expected?'selected':''}>${esc(s)}</option>`).join('')}</select></td>${t0.type==='semi'?`<td><input id="pt${i}" inputmode="numeric" value="${esc(l.tol??0)}" style="width:70px"></td>`:''}`}</tr>`).join('');
+  modal('Sửa thông số · '+t0.name,`<label class="mode"><input type="radio" name="pmode" value="fix" checked><div><b>Sửa lại cho đúng</b><small>Dùng khi khai báo nhầm hoặc cần chỉnh lại số liệu mục tiêu. Áp dụng cả cho kết quả đã nhập: biểu đồ vẽ lại liền mạch, đánh giá Westgard tính lại, không có vạch TS. Có ghi vào nhật ký chỉnh sửa.</small></div></label>
+  <label class="mode"><input type="radio" name="pmode" value="new"><div><b>Thông số mới từ bây giờ</b><small>Dùng khi đổi lô QC hoặc tính lại mean/SD sau khi có đủ số liệu. Kết quả cũ giữ thông số cũ, biểu đồ đổi vạch giới hạn tại điểm này và ghi chú TS.</small></div></label>
+  <div class="scroll"><table><tr><th>Mức</th><th>Số lô</th>${q?'<th>Mean</th><th>SD</th>':`<th>Kết quả mong đợi</th>${t0.type==='semi'?'<th>Sai lệch cho phép (bậc)</th>':''}`}</tr>${lv}</table></div>
+  ${q?`<div class="row" style="margin-top:10px"><label class="fld"><span>TEa (nếu có)</span><div style="display:flex;gap:6px"><input id="pfv" inputmode="decimal" value="${esc(t0.tea?.value||'')}" placeholder="vd 10"><select id="pfk" style="width:90px"><option value="pct" ${t0.tea?.kind==='pct'?'selected':''}>%</option><option value="abs" ${t0.tea?.kind==='abs'?'selected':''}>${esc(t0.unit||'đơn vị')}</option></select></div></label></div><small class="muted">TEa áp dụng cho toàn bộ kết quả của xét nghiệm (không lưu riêng theo từng kết quả).</small>`:''}
+  <div id="pfix">${hasRes?`<label class="fld" style="margin-top:10px"><span>Áp dụng cho kết quả đã nhập</span><select id="psc"><option value="cur">Chỉ các kết quả đang dùng thông số hiện tại</option><option value="all">Tất cả kết quả của mức</option></select></label>`:''}</div>
+  <div id="pnew" style="display:none"><label class="fld" style="margin-top:10px"><span>Lý do / ghi chú (hiện trên biểu đồ)</span><input id="prs" placeholder="vd: đổi lô QC, tính lại SD sau 30 điểm"></label></div>`,()=>{
+    const mode=document.querySelector('input[name=pmode]:checked').value,old=structuredClone(t0),t=structuredClone(t0);
+    for(let i=0;i<t.levels.length;i++){const l=t.levels[i];l.lot=$('#pl'+i).value.trim();
+      if(q){const m=num($('#pm'+i).value),s=num($('#ps'+i).value);if(isNaN(m))return merr(`Mean của “${l.name}” không hợp lệ`);if(isNaN(s)||s<=0)return merr(`SD của “${l.name}” phải > 0`);l.mean=m;l.sd=s}
+      else{l.expected=$('#pe'+i).value;if(t.type==='semi')l.tol=Math.max(0,parseInt($('#pt'+i).value)||0)}}
+    if(q){const v=num($('#pfv').value);t.tea={kind:$('#pfk').value,value:isNaN(v)?0:v}}
+    const ch=diffTest(old,t);
+    if(!ch.length)return merr('Chưa có thay đổi nào');
+    if(mode==='fix'){
+      const scope=$('#psc')?$('#psc').value:'cur';let n=0;
+      t.levels.forEach(l=>{const ol=old.levels.find(x=>x.id===l.id);
+        S.results.forEach(r=>{if(r.testId!==id||r.levelId!==l.id)return;
+          if(scope!=='all'&&!isCur(old,ol,r))return;
+          if(q){r.mean=l.mean;r.sd=l.sd}else{r.expected=l.expected;r.tol=l.tol}
+          if((ol.lot||'')!==l.lot)r.lot=l.lot;
+          n++});
+      });
+      t0.levels=t.levels;if(q)t0.tea=t.tea;
+      addLog(t0,`Sửa lại thông số (${scope==='all'?'tất cả kết quả':'kết quả hiện hành'}, ${n} kết quả): ${ch.join('; ')}`);
+    }else{
+      t0.levels=t.levels;if(q)t0.tea=t.tea;
+      const why=$('#prs').value.trim();
+      if(hasRes)S.events.push({id:uid(),deviceId:t0.deviceId,testId:id,ts:Date.now(),type:'param',op:'',note:ch.join('; ')+(why?' — '+why:''),reset:false});
+      addLog(t0,`Thông số mới từ bây giờ: ${ch.join('; ')}${why?' — '+why:''}`);
+    }
+    save();render();toast('Đã cập nhật thông số');
+  });
+  const upd=()=>{const m=document.querySelector('input[name=pmode]:checked').value;$('#pfix').style.display=m==='fix'?'':'none';$('#pnew').style.display=m==='new'?'':'none'};
+  document.querySelectorAll('input[name=pmode]').forEach(x=>x.onchange=upd);
 }
 
 /* ---------- xuất Excel (.xlsx), không cần thư viện ---------- */
@@ -1207,6 +1300,9 @@ document.addEventListener('click',e=>{
   else if(a==='editDevice')editDevice(id);
   else if(a==='newTest')editTest(null,id);
   else if(a==='editTest')editTest(id);
+  else if(a==='editParams')editParams(id);
+  else if(a==='editRes')editResult(id);
+  else if(a==='editEvt')editEvent(UI.testId,id);
   else if(a==='data')dataDialog();
   else if(a==='xlsx')exportXlsx(id);
   else if(a==='report')reportDialog();
@@ -1216,8 +1312,8 @@ document.addEventListener('click',e=>{
   else if(a==='menu'){document.documentElement.style.setProperty('--hh',($('header').offsetHeight)+'px');document.body.classList.toggle('menu')}
   else if(a==='csv')csv(id);
   else if(a==='toggleAll'){UI.showAll=!UI.showAll;render()}
-  else if(a==='delTest'){const t=T(id);if(confirm(`Xóa xét nghiệm “${t.name}” và toàn bộ kết quả?`)){S.results=S.results.filter(r=>r.testId!==id);S.events=S.events.filter(e=>e.testId!==id);S.tests=S.tests.filter(x=>x.id!==id);UI.testId=null;save();render()}}
-  else if(a==='delRes'){if(confirm('Xóa kết quả này?')){S.results=S.results.filter(r=>r.id!==id);save();render()}}
+  else if(a==='delTest'){const t=T(id);if(confirm(`Xóa xét nghiệm “${t.name}” và toàn bộ kết quả?`)){S.results=S.results.filter(r=>r.testId!==id);S.events=S.events.filter(e=>e.testId!==id);S.log=(S.log||[]).filter(l=>l.testId!==id);S.tests=S.tests.filter(x=>x.id!==id);UI.testId=null;save();render()}}
+  else if(a==='delRes'){const r=S.results.find(x=>x.id===id);if(r&&confirm('Xóa kết quả này?')){const t=T(r.testId);if(t)addLog(t,`Xóa KQ ${r.levelName} ${fmtDT(r.ts)}: ${r.value}`);S.results=S.results.filter(x=>x.id!==id);save();render()}}
   else if(a==='action')editAction(id);
   else if(a==='newEvent')editEvent(id);
   else if(a==='delEvt'){if(confirm('Xóa sự kiện này?')){S.events=S.events.filter(e=>e.id!==id);save();render()}}

@@ -35,7 +35,9 @@ Trên máy cũ: **Dữ liệu / GitHub → Đẩy lên GitHub** (và nên **Tả
 - Nên chọn **một máy chính** để nhập kết quả. Nếu nhập ở nhiều máy, app sẽ cảnh báo khi GitHub có bản mới hơn trước khi ghi đè, nhưng không tự gộp hai bản.
 - Token chỉ lưu trong trình duyệt của máy đó. Mỗi người dùng nên có token riêng và được mời làm collaborator của repo dữ liệu; khi cần thu hồi chỉ cần gỡ collaborator hoặc xóa token.
 - `data.json` đi kèm là **dữ liệu mẫu** để thử. Không đưa file này vào repo dữ liệu thật; dùng “Xóa toàn bộ dữ liệu trong trình duyệt” để bắt đầu từ trống.
-- Đổi mean/SD hoặc số lô của một mức sẽ mở chuỗi biểu đồ mới; kết quả cũ vẫn giữ thông số lúc nhập.
+- **Sửa kết quả đã nhập**: bấm ✎ ở dòng kết quả (đổi giá trị, ngày giờ, lý do chạy, người thực hiện, ghi chú, hành động khắc phục). Sự kiện thiết bị cũng sửa được bằng ✎. Mọi lần sửa/xóa được ghi vào “Nhật ký chỉnh sửa” dưới bảng kết quả.
+- **Sửa Mean / SD / TEa** (nút “Mean/SD/TEa”) có hai chế độ tách biệt: *Sửa lại cho đúng* (nhập sai, áp dụng cả kết quả cũ, biểu đồ liền mạch, không có vạch TS) và *Thông số mới từ bây giờ* (đổi lô, tính lại mean/SD: kết quả cũ giữ thông số cũ, vạch giới hạn đổi bậc tại đường TS và ghi chú trên biểu đồ). Nút “Khai báo” chỉ còn dùng cho tên, đơn vị, thang, quy tắc và thêm/xóa mức; mean/SD/lô/TEa của mức đã có kết quả được khóa ở đó. Thay đổi trong quy trình chạy QC (bảo trì, hiệu chuẩn…) vẫn ghi bằng “＋ Sự kiện”.
+- Biểu đồ z-score trải đều theo từng lần chạy; biểu đồ Levey-Jennings vẽ vạch giới hạn dạng bậc thang, có ghi sẵn “TB … · SD …” của từng đoạn.
 
 ## Dùng trên điện thoại và đồng bộ với máy tính
 
