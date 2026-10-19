@@ -521,7 +521,8 @@ function editTest(id,deviceId){
 
 function dataDialog(){
   const c=ghCfg();
-  modal('Dữ liệu & đồng bộ GitHub',`<h2>Sao lưu</h2><div class="row"><button id="bExp">Tải xuống JSON</button><button id="bImp">Nạp từ file JSON…</button><button id="bCsv">Xuất tất cả CSV</button><button id="bXlsx">Xuất tất cả Excel</button></div><input type="file" id="fImp" accept="application/json,.json" style="display:none">
+  modal('Dữ liệu & đồng bộ GitHub',`<h2>Sao lưu</h2><div class="row"><button id="bExp">Tải xuống JSON</button><button id="bImp">Nạp từ file JSON…</button><button id="bCsv">Xuất tất cả CSV</button><button id="bXlsx">Xuất tất cả Excel</button></div>
+  <div class="row" style="margin-top:8px"><button id="bImpX">Nhập từ Excel / CSV…</button><button id="bTpl">Tải file Excel mẫu</button></div><input type="file" id="fXl" accept=".xlsx,.csv,.txt,.xls" style="display:none"><input type="file" id="fImp" accept="application/json,.json" style="display:none">
   <h2 style="margin-top:18px">Đồng bộ GitHub</h2><p class="muted" style="font-size:13px;margin-top:0">Dữ liệu được ghi vào một file JSON trong repo của bạn. Token chỉ lưu trong trình duyệt này. Nên dùng <b>fine-grained token</b> chỉ cấp quyền <i>Contents: Read and write</i> cho đúng repo này.</p>
   <div class="row"><label class="fld"><span>Repo (chủ/tên)</span><input id="gr" value="${esc(c.repo||'')}" placeholder="ten-github/ten-repo"></label><label class="fld"><span>Nhánh</span><input id="gb" value="${esc(c.branch||'main')}"></label><label class="fld"><span>Đường dẫn file</span><input id="gp" value="${esc(c.path||'data.json')}"></label></div>
   <label class="fld" style="margin-top:10px"><span>Personal access token</span><input id="gt" type="password" value="${esc(c.token||'')}" autocomplete="off"></label>
@@ -532,6 +533,9 @@ function dataDialog(){
   $('#bExp').onclick=()=>dl('iqc-data.json',JSON.stringify(S,null,1),'application/json');
   $('#bCsv').onclick=()=>csv(null);
   $('#bXlsx').onclick=()=>exportXlsx(null);
+  $('#bTpl').onclick=()=>downloadTemplate();
+  $('#bImpX').onclick=()=>$('#fXl').click();
+  $('#fXl').onchange=e=>{const f=e.target.files[0];if(f)importDialog(f)};
   $('#bImp').onclick=()=>$('#fImp').click();
   $('#fImp').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const d=normalize(JSON.parse(await f.text()));if(!confirm('Thay toàn bộ dữ liệu hiện tại bằng nội dung file này?'))return;S=d;UI.testId=null;save();render();$('#m').close();toast('Đã nạp dữ liệu')}catch(err){toast('Lỗi: '+err.message)}};
   $('#gPush').onclick=async()=>{const c=rd();if(!c.repo||!c.token)return toast('Cần nhập repo và token');toast('Đang đẩy…');try{try{await ghPush(c)}catch(e){if(e.code==='CONFLICT'&&confirm(e.message+'\n\nVẫn ghi đè dữ liệu trên GitHub bằng dữ liệu của máy này?'))await ghPush(c,true);else throw e}toast('Đã đẩy lên GitHub')}catch(e){toast('Lỗi GitHub: '+e.message)}};
@@ -642,7 +646,7 @@ function exportXlsx(testId){
   const st={ok:'Đạt',warn:'Cảnh báo',fail:'Vi phạm'},rd=(x,d)=>x==null||isNaN(x)?'':+x.toFixed(d);
   const R=[['Thiết bị','Xét nghiệm','Loại','Mức','Lô','Thời gian','Kết quả','Mean','SD','z / độ lệch bậc','Trạng thái','Quy tắc / ghi nhận','Lý do chạy QC','Người thực hiện','Ghi chú','Hành động khắc phục']];
   const X=[['Thiết bị','Xét nghiệm','Loại','Mức','Lô','n','Mean mục tiêu','SD mục tiêu','TB thực tế','SD thực tế','CV %','Bias %','Sigma','Tỷ lệ đạt %','Số không đạt']];
-  const C=[['Thiết bị','Xét nghiệm','Loại','Đơn vị','TEa','Mức','Lô','Mean','SD','Kết quả mong đợi','Sai lệch cho phép (bậc)']];
+  const C=[['Thiết bị','Xét nghiệm','Loại','Đơn vị','TEa','Mức','Lô','Mean','SD','Kết quả mong đợi','Sai lệch cho phép (bậc)','Thang kết quả']];
   const E=[['Thiết bị','Áp dụng cho','Loại sự kiện','Thời gian','Người thực hiện','Nội dung','Bắt đầu chuỗi quy tắc mới']];
   tests.forEach(t=>{
     const dn=D(t.deviceId)?.name||'',{res,out}=evalTest(t),q=t.type==='quant',d=t.dec??2;
@@ -650,7 +654,7 @@ function exportXlsx(testId){
     t.levels.forEach(l=>{
       const s=ptsStats(t,l,res.filter(r=>isCur(t,l,r)&&out[r.id]).map(r=>({r,o:out[r.id]})));
       X.push(q?[dn,t.name,typeName[t.type],l.name,l.lot||'',s.n,l.mean,l.sd,rd(s.mean,d+1),rd(s.sd,d+1),rd(s.cv,1),rd(s.bias,1),rd(s.sig,1),'',s.fail]:[dn,t.name,typeName[t.type],l.name,l.lot||'',s.n,'','','','','','','',rd(s.pct,1),s.fail]);
-      C.push([dn,t.name,typeName[t.type],t.unit||'',t.tea&&t.tea.value>0?t.tea.value+(t.tea.kind==='pct'?' %':' '+(t.unit||'')):'',l.name,l.lot||'',q?l.mean:'',q?l.sd:'',q?'':l.expected,q?'':(l.tol||0)]);
+      C.push([dn,t.name,typeName[t.type],t.unit||'',t.tea&&t.tea.value>0?t.tea.value+(t.tea.kind==='pct'?' %':' '+(t.unit||'')):'',l.name,l.lot||'',q?l.mean:'',q?l.sd:'',q?'':l.expected,q?'':(l.tol||0),q?'':t.scale.join(', ')]);
     });
   });
   const dev=new Set(tests.map(t=>t.deviceId));
@@ -661,6 +665,252 @@ function exportXlsx(testId){
     {name:'Sự kiện',rows:E,widths:[22,22,24,17,16,40,14]},
     {name:'Khai báo',rows:C,widths:[22,20,16,10,12,18,10,10,10,18,14]}]);
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='noi-kiem-'+new Date().toISOString().slice(0,10)+'.xlsx';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),3000);
+  return blob;
+}
+
+/* ---------- nhập từ Excel / CSV ---------- */
+async function inflateRaw(u8){const ds=new DecompressionStream('deflate-raw'),w=ds.writable.getWriter();w.write(u8);w.close();return new Uint8Array(await new Response(ds.readable).arrayBuffer())}
+async function unzip(buf){
+  const u8=new Uint8Array(buf),dv=new DataView(buf),td=new TextDecoder();
+  let e=u8.length-22;while(e>=0&&dv.getUint32(e,true)!==0x06054b50)e--;
+  if(e<0)throw new Error('Không phải file .xlsx hợp lệ');
+  const n=dv.getUint16(e+10,true);let p=dv.getUint32(e+16,true);const files={};
+  for(let i=0;i<n;i++){
+    if(dv.getUint32(p,true)!==0x02014b50)break;
+    const method=dv.getUint16(p+10,true),cs=dv.getUint32(p+20,true),nl=dv.getUint16(p+28,true),el=dv.getUint16(p+30,true),cl=dv.getUint16(p+32,true),lo=dv.getUint32(p+42,true);
+    const name=td.decode(u8.subarray(p+46,p+46+nl));
+    files[name]=async()=>{const ln=dv.getUint16(lo+26,true),le=dv.getUint16(lo+28,true),s=lo+30+ln+le,d=u8.subarray(s,s+cs);
+      if(method===0)return d;if(method===8)return inflateRaw(d);throw new Error('Kiểu nén của file không được hỗ trợ')};
+    p+=46+nl+el+cl;
+  }
+  return files;
+}
+const xmlDoc=s=>new DOMParser().parseFromString(s,'application/xml');
+const nsel=(el,tag)=>Array.from(el.getElementsByTagNameNS('*',tag));
+const colIdx=ref=>{const m=/^([A-Z]+)/.exec(ref);let n=0;for(const ch of m[1])n=n*26+ch.charCodeAt(0)-64;return n-1};
+async function readXlsx(buf){
+  const f=await unzip(buf),td=new TextDecoder(),get=async n=>f[n]?td.decode(await f[n]()):null;
+  const wbx=await get('xl/workbook.xml');if(!wbx)throw new Error('Không phải file .xlsx hợp lệ');
+  const wb=xmlDoc(wbx),rels=xmlDoc(await get('xl/_rels/workbook.xml.rels')),rmap={};
+  nsel(rels,'Relationship').forEach(r=>rmap[r.getAttribute('Id')]=r.getAttribute('Target'));
+  let sst=[];const ss=await get('xl/sharedStrings.xml');
+  if(ss)sst=nsel(xmlDoc(ss),'si').map(si=>nsel(si,'t').map(t=>t.textContent).join(''));
+  const out=[];
+  for(const sh of nsel(wb,'sheet')){
+    const rid=sh.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships','id')||sh.getAttribute('r:id');
+    let tg=rmap[rid]||'';tg=tg.startsWith('/')?tg.slice(1):'xl/'+tg;
+    const x=await get(tg);if(!x)continue;
+    const rows=[];
+    nsel(xmlDoc(x),'row').forEach(r=>{
+      const arr=[];
+      nsel(r,'c').forEach(c=>{
+        const ref=c.getAttribute('r'),t=c.getAttribute('t'),ci=ref?colIdx(ref):arr.length;
+        let v=nsel(c,'v')[0]?.textContent;
+        if(t==='s')v=sst[+v];else if(t==='inlineStr')v=nsel(c,'t').map(q=>q.textContent).join('');
+        else if(t==='str'||t==='e'||t==='b')v=v??'';
+        else if(v!=null&&v!=='')v=Number(v);
+        if(v===undefined||v==='')return;
+        arr[ci]=v;
+      });
+      rows[(+r.getAttribute('r')||rows.length+1)-1]=arr;
+    });
+    out.push({name:sh.getAttribute('name'),rows:Array.from(rows,r=>r||[])});
+  }
+  return out;
+}
+function readCsv(text){
+  text=text.replace(/^﻿/,'');
+  const first=text.split(/\r?\n/,1)[0],cnt=c=>first.split(c).length-1;
+  const d=cnt(';')>cnt(',')&&cnt(';')>=cnt('\t')?';':cnt('\t')>cnt(',')?'\t':',';
+  const rows=[];let row=[],cur='',q=false;
+  for(let i=0;i<text.length;i++){const ch=text[i];
+    if(q){if(ch==='"'){if(text[i+1]==='"'){cur+='"';i++}else q=false}else cur+=ch}
+    else if(ch==='"')q=true;else if(ch===d){row.push(cur);cur=''}
+    else if(ch==='\n'||ch==='\r'){if(ch==='\r'&&text[i+1]==='\n')i++;row.push(cur);rows.push(row);row=[];cur=''}
+    else cur+=ch;}
+  if(cur!==''||row.length){row.push(cur);rows.push(row)}
+  const conv=c=>{const t=c.trim();if(t==='')return undefined;return /^-?\d+([.,]\d+)?$/.test(t)&&!/^-?0\d/.test(t)?Number(t.replace(',','.')):c};
+  return[{name:'CSV',rows:rows.map(r=>r.map(conv))}];
+}
+async function readTable(file){
+  const n=file.name.toLowerCase();
+  if(n.endsWith('.xls'))throw new Error('Chưa hỗ trợ .xls cũ, hãy mở bằng Excel và lưu lại thành .xlsx');
+  if(n.endsWith('.csv')||n.endsWith('.txt'))return readCsv(await file.text());
+  return readXlsx(await file.arrayBuffer());
+}
+const fold=s=>String(s??'').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/gi,'d').toLowerCase().replace(/\s+/g,' ').trim();
+const nrm=s=>fold(s).replace(/[^a-z0-9]/g,'');
+const nk=s=>String(s??'').trim().toLowerCase().replace(/\s+/g,' ');
+const str=v=>v==null?'':String(v).trim();
+const HDR={dev:['thietbi','tenthietbi','may'],test:['xetnghiem','tenxetnghiem','chiso'],type:['loai','loaixetnghiem'],level:['muc','mucqc','tenmuc','mucnoikiem'],lot:['lo','solo','lot'],unit:['donvi'],mean:['mean','tb','trungbinh'],sd:['sd','dolechchuan'],tea:['tea'],teak:['donvitea','loaitea'],exp:['ketquamongdoi','mongdoi','muctieu'],scale:['thang','thangdo','thangketqua'],tol:['sailechchophep','sailechchophepbac'],dt:['ngaygio','thoigian','ngay','datetime'],val:['ketqua','giatri'],reason:['lydochayqc','lydo'],op:['nguoithuchien'],note:['ghichu','noidung'],action:['hanhdongkhacphuc'],ap:['apdungcho'],evt:['loaisukien'],reset:['batdauchuoiquytacmoi']};
+function mapHeaders(rows){
+  for(let i=0;i<Math.min(rows.length,6);i++){
+    const cm={};let hit=0;
+    (rows[i]||[]).forEach((h,ci)=>{const k=nrm(h);if(!k)return;for(const f in HDR)if(cm[f]==null&&HDR[f].includes(k)){cm[f]=ci;hit++;break}});
+    if(hit>=3)return{cm,hi:i};
+  }
+  return null;
+}
+const parseType=v=>{const x=nrm(v);if(!x)return null;if(x.includes('thang'))return'semi';if(x.includes('luong'))return'quant';if(x.includes('tinh'))return'qual';return undefined};
+function parseDT(v){
+  if(typeof v==='number'){if(v<20000)return NaN;const d=new Date(Math.round((v-25569)*1440)*60000);return new Date(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate(),d.getUTCHours(),d.getUTCMinutes()).getTime()}
+  const s=String(v).trim();let m;
+  if(m=s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})(?:[ T,]+(\d{1,2}):(\d{2})(?::\d{2})?)?$/))return new Date(+m[3],+m[2]-1,+m[1],+(m[4]||8),+(m[5]||0)).getTime();
+  if(m=s.match(/^(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})(?:[ T,]+(\d{1,2}):(\d{2})(?::\d{2})?)?$/))return new Date(+m[1],+m[2]-1,+m[3],+(m[4]||8),+(m[5]||0)).getTime();
+  return NaN;
+}
+const mnum=v=>v===''||v==null?NaN:typeof v==='number'?v:num(v);
+const decOf=v=>{const m=String(v).match(/[.,](\d+)/);return m?m[1].length:0};
+const splitScale=v=>[...new Set(String(v??'').split(/[,;|]/).map(s=>s.trim()).filter(Boolean))];
+function parseTea(v,k){
+  if(v===''||v==null)return null;
+  const s=String(v),m=s.match(/-?\d+(?:[.,]\d+)?/);if(!m)return null;
+  const val=num(m[0]);if(isNaN(val))return null;
+  const kk=fold(k);
+  const kind=s.includes('%')||kk==='%'||kk.startsWith('pct')||kk.startsWith('phan tram')?'pct':(kk?'abs':(/[a-z]/i.test(s.replace(m[0],''))?'abs':'pct'));
+  return{kind,value:val};
+}
+const mkKey=(tid,lid,ts,val)=>tid+'|'+lid+'|'+Math.round(ts/60000)+'|'+String(val);
+const ymd=ts=>{const d=new Date(ts);return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`};
+
+function buildImport(sheets){
+  const C=structuredClone(S);C.events??=[];
+  const st={newDev:0,newTest:0,newLv:0,res:0,dup:0,evt:0,evtDup:0,errs:[],used:[],first:null};
+  const err=(sh,ln,m)=>st.errs.push(`${sh}, dòng ${ln}: ${m}`);
+  const tC=new Map(),lC=new Map(),items=[],evs=[],parts=[];
+  const prio={cfg:0,res:1,evt:2};
+  for(const sh of sheets){
+    if(fold(sh.name)==='thong ke'||fold(sh.name)==='huong dan')continue;
+    const h=mapHeaders(sh.rows);if(!h)continue;
+    const cm=h.cm,kind=cm.evt!=null?'evt':(cm.val!=null&&cm.dt!=null)?'res':(cm.level!=null&&cm.test!=null&&cm.dev!=null)?'cfg':null;
+    if(kind)parts.push({sh,cm,hi:h.hi,kind});
+  }
+  parts.sort((a,b)=>prio[a.kind]-prio[b.kind]);
+  parts.forEach(p=>st.used.push(p.sh.name+' ('+{evt:'sự kiện',res:'kết quả',cfg:'khai báo'}[p.kind]+')'));
+  if(!parts.length){st.errs.push('Không nhận ra bảng dữ liệu. Hàng tiêu đề cần có tối thiểu: Thiết bị, Xét nghiệm, Mức, Ngày giờ, Kết quả (xem file mẫu).');return{C,st}}
+  const setIf=(o,k,v)=>{if(v!==''&&v!=null&&!(typeof v==='number'&&isNaN(v)))o[k]=v};
+  for(const p of parts){
+    const {sh,cm,hi,kind}=p;
+    for(let r=hi+1;r<sh.rows.length;r++){
+      const row=sh.rows[r]||[],g=f=>cm[f]==null?'':(row[cm[f]]??''),ln=r+1;
+      if(!row.some(v=>v!==undefined&&v!==''))continue;
+      if(kind==='evt'){evs.push({sh:sh.name,ln,dev:str(g('dev')),ap:str(g('ap')),type:str(g('evt')),ts:parseDT(g('dt')),op:str(g('op')),note:str(g('note')),reset:str(g('reset'))});continue}
+      const dev=str(g('dev')),test=str(g('test')),lv=str(g('level'));
+      if(!dev||!test||!lv){err(sh.name,ln,'thiếu Thiết bị / Xét nghiệm / Mức');continue}
+      const ty=parseType(g('type'));if(ty===undefined){err(sh.name,ln,'Loại xét nghiệm không hợp lệ: '+g('type'));continue}
+      const tk=nk(dev)+'|'+nk(test),lk=tk+'|'+nk(lv);
+      const tc=tC.get(tk)||{};if(ty)tc.type=ty;setIf(tc,'unit',str(g('unit')));
+      const tea=parseTea(g('tea'),g('teak'));if(tea)tc.tea=tea;
+      const sc=splitScale(g('scale'));if(sc.length)tc.scale=sc;
+      const mean=mnum(g('mean')),sd=mnum(g('sd'));
+      if(!isNaN(mean)||!isNaN(sd))tc.dec=Math.max(tc.dec||0,Math.min(4,Math.max(1,decOf(g('mean')),decOf(g('sd')))));
+      tC.set(tk,tc);
+      const lc=lC.get(lk)||{};setIf(lc,'lot',str(g('lot')));setIf(lc,'mean',mean);setIf(lc,'sd',sd);setIf(lc,'exp',str(g('exp')));setIf(lc,'tol',mnum(g('tol')));lC.set(lk,lc);
+      if(kind==='res'){
+        const ts=parseDT(g('dt')),raw=g('val');
+        if(raw===''){err(sh.name,ln,'thiếu Kết quả');continue}
+        if(isNaN(ts)){err(sh.name,ln,'Ngày giờ không hợp lệ: '+g('dt')+' (dùng dd/mm/yyyy hh:mm)');continue}
+        items.push({sh:sh.name,ln,dev,test,lv,tk,lk,ts,raw,own:{mean,sd,exp:str(g('exp')),tol:mnum(g('tol')),lot:str(g('lot'))},reason:str(g('reason')),op:str(g('op')),note:str(g('note')),action:str(g('action'))});
+      }
+    }
+  }
+  const seen=new Set(C.results.map(r=>mkKey(r.testId,r.levelId,r.ts,r.value)));
+  const findDev=n=>C.devices.find(d=>nk(d.name)===nk(n));
+  items.forEach(it=>{
+    let d=findDev(it.dev),t=d&&C.tests.find(x=>x.deviceId===d.id&&nk(x.name)===nk(it.test));
+    const tc=tC.get(it.tk)||{},lc=lC.get(it.lk)||{};
+    const numv=typeof it.raw==='number'?it.raw:num(it.raw);
+    if(t&&tc.type&&tc.type!==t.type){err(it.sh,it.ln,`Loại "${typeName[tc.type]}" không khớp với xét nghiệm đã có (${typeName[t.type]})`);return}
+    const type=t?t.type:(tc.type||(isNaN(numv)?(tc.scale&&tc.scale.length>2?'semi':'qual'):'quant'));
+    let lvl=t&&t.levels.find(l=>nk(l.name)===nk(it.lv)),value,rec;
+    if(type==='quant'){
+      if(isNaN(numv)){err(it.sh,it.ln,'Kết quả không phải số: '+it.raw);return}
+      value=numv;
+      const pm=Number.isFinite(it.own.mean)?it.own.mean:(lvl?lvl.mean:lc.mean),ps=Number.isFinite(it.own.sd)?it.own.sd:(lvl?lvl.sd:lc.sd);
+      if(!Number.isFinite(pm)||!(ps>0)){err(it.sh,it.ln,`thiếu Mean/SD (SD phải > 0) cho mức "${it.lv}"`);return}
+      rec={mean:pm,sd:ps};
+    }else{
+      const scale=t?t.scale:(tc.scale||(type==='qual'?['Âm tính','Dương tính']:null));
+      if(!scale||scale.length<2){err(it.sh,it.ln,`thiếu "Thang kết quả" cho xét nghiệm "${it.test}"`);return}
+      const canon=x=>scale.find(s=>fold(s)===fold(x));
+      value=canon(it.raw);if(value===undefined){err(it.sh,it.ln,`Kết quả "${it.raw}" không thuộc thang (${scale.join(', ')})`);return}
+      const ex=canon(it.own.exp||(lvl?lvl.expected:lc.exp));
+      if(ex===undefined){err(it.sh,it.ln,`thiếu hoặc sai "Kết quả mong đợi" cho mức "${it.lv}"`);return}
+      const tl=type==='semi'?Math.max(0,Math.round(Number.isFinite(it.own.tol)?it.own.tol:(lvl&&lvl.tol!=null?lvl.tol:(Number.isFinite(lc.tol)?lc.tol:0)))):0;
+      rec={expected:ex,tol:tl};
+      if(!t)t={scale:[...scale]};
+    }
+    if(!d){d={id:uid(),name:it.dev,model:'',serial:'',location:''};C.devices.push(d);st.newDev++}
+    if(!t||!t.id){const sc=t&&t.scale;t=type==='quant'?{id:uid(),deviceId:d.id,name:it.test,type,unit:tc.unit||'',dec:tc.dec||2,tea:tc.tea||{kind:'pct',value:0},rules:{...defaultRules},levels:[]}:{id:uid(),deviceId:d.id,name:it.test,type,scale:sc,levels:[]};C.tests.push(t);st.newTest++}
+    if(!lvl){
+      lvl=type==='quant'?{id:uid(),name:it.lv,lot:lc.lot||'',mean:Number.isFinite(lc.mean)?lc.mean:rec.mean,sd:lc.sd>0?lc.sd:rec.sd}:{id:uid(),name:it.lv,lot:lc.lot||'',expected:rec.expected,tol:rec.tol};
+      t.levels.push(lvl);st.newLv++;
+    }
+    const k=mkKey(t.id,lvl.id,it.ts,value);
+    if(seen.has(k)){st.dup++;return}
+    seen.add(k);
+    C.results.push({id:uid(),testId:t.id,levelId:lvl.id,levelName:lvl.name,run:ymd(it.ts),ts:it.ts,value,lot:it.own.lot||lvl.lot||'',...rec,reason:it.reason||'Thường quy',op:it.op,note:it.note,action:it.action});
+    st.res++;st.first??=t.id;
+  });
+  const eseen=new Set(C.events.map(e=>[e.deviceId,e.testId||'',e.type,Math.round(e.ts/60000),e.note||''].join('|')));
+  evs.forEach(e=>{
+    const d=findDev(e.dev);if(!d){err(e.sh,e.ln,`không thấy thiết bị "${e.dev}"`);return}
+    let tid=null;
+    if(e.ap&&!/^toan thiet bi/.test(fold(e.ap))){const t=C.tests.find(x=>x.deviceId===d.id&&nk(x.name)===nk(e.ap));if(!t){err(e.sh,e.ln,`không thấy xét nghiệm "${e.ap}" của thiết bị này`);return}tid=t.id}
+    const ft=fold(e.type),type=Object.keys(EVT).find(k=>k===ft||fold(EVT[k].n)===ft||fold(EVT[k].c)===ft);
+    if(!type){err(e.sh,e.ln,`loại sự kiện không hợp lệ: "${e.type}"`);return}
+    if(isNaN(e.ts)){err(e.sh,e.ln,'Thời gian không hợp lệ');return}
+    const reset=e.reset===''?EVT[type].reset:/^(co|yes|true|1|x)$/.test(fold(e.reset));
+    const k=[d.id,tid||'',type,Math.round(e.ts/60000),e.note].join('|');
+    if(eseen.has(k)){st.evtDup++;return}
+    eseen.add(k);C.events.push({id:uid(),deviceId:d.id,testId:tid,ts:e.ts,type,op:e.op,note:e.note,reset});st.evt++;
+  });
+  return{C,st};
+}
+function importDialog(file){
+  readTable(file).then(sheets=>{
+    const {C,st}=buildImport(sheets),any=st.res+st.evt+st.newDev+st.newTest+st.newLv>0;
+    const li=a=>`<ul class="adv">${a.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`;
+    let h=`<p class="muted" style="margin-top:0">${st.used.length?'Bảng được đọc: '+esc(st.used.join('; ')):''}</p>`;
+    h+=any?`<div class="advbox"><h4>Sẽ thêm vào app</h4>${li([`${st.res} kết quả QC`,`${st.newDev} thiết bị mới, ${st.newTest} xét nghiệm mới, ${st.newLv} mức QC mới`,...(st.evt?[`${st.evt} sự kiện thiết bị`]:[])])}</div>`:'<div class="alert">Không có dữ liệu mới để nhập.</div>';
+    if(st.dup||st.evtDup)h+=`<p class="muted">Bỏ qua ${st.dup} kết quả và ${st.evtDup} sự kiện đã có trong app (trùng xét nghiệm, mức, thời gian và giá trị).</p>`;
+    if(st.errs.length)h+=`<div class="alert fail"><b>${st.errs.length} dòng bị bỏ qua vì lỗi:</b>${li(st.errs.slice(0,15))}${st.errs.length>15?`<small>… và ${st.errs.length-15} lỗi khác</small>`:''}</div>`;
+    if(any)h+='<p class="muted" style="font-size:13px">Dữ liệu hiện có được giữ nguyên, chỉ thêm mới. Nên bấm “Tải xuống JSON” ở mục Dữ liệu để sao lưu trước khi nhập.</p>';
+    modal('Nhập dữ liệu từ '+file.name,h,any?()=>{S=C;S.events??=[];if(st.first){UI.testId=st.first;UI.deviceId=T(st.first).deviceId}save();render();toast(`Đã nhập ${st.res} kết quả`)}:null,{saveLabel:'Nhập vào app'});
+  }).catch(e=>toast('Lỗi đọc file: '+e.message));
+}
+function downloadTemplate(){
+  const dt=(y,m,d,h,mi)=>({d:new Date(y,m-1,d,h,mi).getTime()});
+  const H=['Thiết bị','Xét nghiệm','Loại','Mức','Số lô','Đơn vị','Mean','SD','TEa','Đơn vị TEa','Kết quả mong đợi','Thang kết quả','Sai lệch cho phép (bậc)','Ngày giờ','Kết quả','Lý do chạy QC','Người thực hiện','Ghi chú','Hành động khắc phục'];
+  const R=[H,
+    ['Máy sinh hóa AU480','Glucose','Định lượng','Mức 1','L2401','mg/dL',92,2.8,10,'%','','','',dt(2026,10,1,7,30),91.4,'Thường quy','Lan','',''],
+    ['Máy sinh hóa AU480','Glucose','Định lượng','Mức 1','L2401','mg/dL',92,2.8,10,'%','','','',dt(2026,10,2,7,30),94.1,'Thường quy','Minh','',''],
+    ['Máy sinh hóa AU480','Glucose','Định lượng','Mức 2','L2402','mg/dL',248,7.4,10,'%','','','',dt(2026,10,1,7,30),251,'Thường quy','Lan','',''],
+    ['Máy sinh hóa AU480','Glucose','Định lượng','Mức 2','L2402','mg/dL',248,7.4,10,'%','','','',dt(2026,10,2,7,30),243.6,'Thường quy','Minh','',''],
+    ['Máy sinh hóa AU480','Creatinine','Định lượng','Mức 1','L2401','mg/dL',0.95,0.04,15,'%','','','',dt(2026,10,1,7,30),0.97,'Thường quy','Lan','',''],
+    ['Máy nước tiểu','Test nhanh HIV','Định tính','Chứng âm','N01','','','','','','Âm tính','Âm tính, Dương tính','',dt(2026,10,1,8,0),'Âm tính','Thường quy','Hà','',''],
+    ['Máy nước tiểu','Test nhanh HIV','Định tính','Chứng dương','P01','','','','','','Dương tính','Âm tính, Dương tính','',dt(2026,10,1,8,0),'Dương tính','Thường quy','Hà','',''],
+    ['Máy nước tiểu','Protein niệu','Thang đo','Chứng dương','U11','','','','','','2+','Âm tính, ±, 1+, 2+, 3+, 4+',1,dt(2026,10,1,8,10),'2+','Thường quy','Hà','',''],
+    ['Máy nước tiểu','Protein niệu','Thang đo','Chứng dương','U11','','','','','','2+','Âm tính, ±, 1+, 2+, 3+, 4+',1,dt(2026,10,2,8,10),'1+','Thường quy','Hà','','']];
+  const G=[['Cột','Bắt buộc','Ý nghĩa'],
+    ['Thiết bị','Có','Tên thiết bị. Chưa có trong app thì app tự tạo.'],
+    ['Xét nghiệm','Có','Tên xét nghiệm của thiết bị đó. Chưa có thì app tự tạo.'],
+    ['Loại','Nên có','Định lượng, Định tính hoặc Thang đo (định tính có thang đo). Bỏ trống: app đoán theo kết quả (số = định lượng, chữ = định tính).'],
+    ['Mức','Có','Tên mức nội kiểm, ví dụ Mức 1, Mức 2, Chứng âm.'],
+    ['Số lô','Không','Số lô vật liệu QC.'],
+    ['Đơn vị','Không','Đơn vị của xét nghiệm định lượng, ví dụ mg/dL.'],
+    ['Mean, SD','Có với định lượng','Giá trị trung bình và độ lệch chuẩn của mức QC. SD phải lớn hơn 0. Chỉ cần ghi ở dòng đầu của mỗi mức, các dòng sau để trống cũng được.'],
+    ['TEa, Đơn vị TEa','Không','Sai số tổng cho phép. Đơn vị TEa ghi % hoặc ghi đơn vị đo (mg/dL…); để trống thì hiểu là %.'],
+    ['Kết quả mong đợi','Có với định tính / thang đo','Kết quả đúng của mức QC, phải nằm trong Thang kết quả.'],
+    ['Thang kết quả','Có với thang đo','Các giá trị xếp từ thấp đến cao, cách nhau bằng dấu phẩy. Định tính để trống thì dùng Âm tính, Dương tính.'],
+    ['Sai lệch cho phép (bậc)','Không','Chỉ cho thang đo. Ví dụ 1 nghĩa là lệch ±1 bậc vẫn đạt. Mặc định 0.'],
+    ['Ngày giờ','Có','Ô ngày giờ của Excel, hoặc chữ dạng dd/mm/yyyy hh:mm. Chỉ có ngày thì lấy 08:00.'],
+    ['Kết quả','Có','Số (định lượng) hoặc chữ nằm trong thang (định tính, thang đo).'],
+    ['Lý do chạy QC, Người thực hiện, Ghi chú, Hành động khắc phục','Không','Thông tin đi kèm.'],
+    ['Cột khác','','Cột lạ bị bỏ qua. File xuất từ chính app (Xuất Excel) nhập lại được; sheet “Khai báo” và “Sự kiện” nếu có cũng được đọc.'],
+    ['Nhập trùng','','Dòng có cùng xét nghiệm, mức, thời gian và kết quả với dữ liệu đã có sẽ bị bỏ qua, nên nhập lại cùng file không bị nhân đôi.']];
+  const blob=buildXlsx([{name:'Nhập liệu',rows:R,widths:[22,18,12,12,9,9,8,8,6,10,16,26,12,17,10,14,14,18,22]},{name:'Hướng dẫn',rows:G,widths:[34,24,100]}]);
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='mau-nhap-noi-kiem.xlsx';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),3000);
   return blob;
 }
 

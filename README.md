@@ -56,3 +56,25 @@ App là PWA nên cài được từ trình duyệt, miễn phí, không cần fi
 3. App có biểu tượng riêng, mở trong cửa sổ riêng và mở được khi mất mạng. Khi có mạng, app tự lấy bản mới nhất.
 
 Lưu ý: dữ liệu của bản cài và của tab trình duyệt thường dùng chung một nơi lưu trên cùng máy, nhưng mỗi máy/điện thoại có dữ liệu riêng, đồng bộ qua GitHub. Sau khi cập nhật app, nếu chưa thấy thay đổi, đóng hẳn app rồi mở lại (hoặc Ctrl+F5).
+
+## Nhập dữ liệu từ Excel / CSV
+
+**Dữ liệu → Nhập từ Excel / CSV…** (hoặc bấm “Tải file Excel mẫu” để lấy file đúng định dạng). Hỗ trợ `.xlsx` và `.csv`; chưa hỗ trợ `.xls` cũ (mở bằng Excel, lưu lại thành .xlsx).
+
+Chỉ cần **một bảng**, mỗi dòng là một kết quả QC, hàng đầu là tiêu đề:
+
+| Cột | Bắt buộc | Ghi chú |
+|---|---|---|
+| Thiết bị, Xét nghiệm, Mức | Có | Chưa có trong app thì tự tạo |
+| Ngày giờ | Có | Ô ngày giờ của Excel hoặc chữ dd/mm/yyyy hh:mm |
+| Kết quả | Có | Số (định lượng) hoặc chữ trong thang (định tính, thang đo) |
+| Loại | Nên có | Định lượng / Định tính / Thang đo; bỏ trống thì đoán theo kết quả |
+| Mean, SD | Định lượng | Ghi ở dòng đầu của mỗi mức là đủ; SD > 0 |
+| Số lô, Đơn vị, TEa, Đơn vị TEa | Không | TEa ghi số, Đơn vị TEa là % hoặc đơn vị đo |
+| Kết quả mong đợi, Thang kết quả, Sai lệch cho phép (bậc) | Định tính / thang đo | Thang: các giá trị từ thấp đến cao, cách nhau bằng dấu phẩy |
+| Lý do chạy QC, Người thực hiện, Ghi chú, Hành động khắc phục | Không | |
+
+- Trước khi nhập, app hiện bản xem trước (số kết quả, thiết bị/xét nghiệm/mức mới, dòng lỗi kèm số dòng). Dòng lỗi bị bỏ qua, dòng đúng vẫn nhập.
+- Dữ liệu hiện có được giữ nguyên, chỉ thêm. Dòng trùng (cùng xét nghiệm, mức, thời gian, kết quả) bị bỏ qua nên nhập lại cùng file không bị nhân đôi.
+- File do chính app xuất (Xuất Excel) nhập lại được, gồm cả sheet “Khai báo” và “Sự kiện”.
+- Nếu một mức có mean/SD khác nhau giữa các dòng, kết quả cũ giữ thông số riêng của dòng đó và nằm ở chuỗi biểu đồ riêng (giống khi đổi lô).
