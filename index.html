@@ -72,6 +72,8 @@ dialog .mf{padding:10px 16px;border-top:1px solid var(--line);display:flex;gap:8
 #rep .foot{border-top:1px solid #ccc;margin-top:24px;padding:8px 0 0;color:#555}
 .menu{display:none}
 .closemenu{display:none}
+.vctl{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.vctl input[type=date]{min-width:0}
 .ic{display:none}
 table.rt .cfl{display:none}
 .sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin:2px 0 14px}
@@ -218,7 +220,7 @@ const ADV_GENERAL=['Với vi phạm loại “từ chối” (đỏ): tạm dừ
 const advKey=f=>f.startsWith('2-2s')?'2-2s':f.startsWith('Lệch ')?'step-dev':f==='Sát giới hạn'?'step-near':f.startsWith('4 lần lệch')?'step-trend':f;
 
 let S={version:1,devices:[],tests:[],results:[],events:[]};
-let UI={deviceId:null,testId:null,lastN:40,flash:null,showAll:false};
+let UI={deviceId:null,testId:null,lastN:40,sel:'n40',from:'',to:'',flash:null,showAll:false};
 const T=id=>S.tests.find(t=>t.id===id), D=id=>S.devices.find(d=>d.id===id);
 
 /* ---------- lưu trữ ---------- */
@@ -307,11 +309,37 @@ function xTicks(items,X,y){
   return s;
 }
 function legend(extra='',sec=false){return `<div class="legend${sec?' sec':''}"><span><i style="background:var(--accent)"></i>Đạt</span><span>▲ Cảnh báo</span><span>■ Vi phạm / ngoài giới hạn</span>${extra}${S.events.length?'<span style="color:var(--ev)">┆ Sự kiện thiết bị (BT bảo trì · HC hiệu chuẩn · SC sửa chữa · TT thuốc thử · LQ lô QC)</span>':''}</div>`}
-function lastN(arr){return UI.lastN>0?arr.slice(-UI.lastN):arr}
+const VIEW_OPTS=[['n20','20 điểm gần nhất'],['n40','40 điểm gần nhất'],['n90','90 điểm gần nhất'],['n0','Tất cả'],['today','Hôm nay'],['7','7 ngày gần nhất'],['30','30 ngày gần nhất'],['month','Tháng này'],['prev','Tháng trước'],['day','Một ngày…'],['custom','Khoảng ngày…']];
+const dayStart=s=>{const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(s||'');return m?new Date(+m[1],+m[2]-1,+m[3]).getTime():NaN};
+const addDays=(s,n)=>{const t=dayStart(s);return isNaN(t)?s:ymd(new Date(new Date(t).getFullYear(),new Date(t).getMonth(),new Date(t).getDate()+n).getTime())};
+function viewRange(){
+  const s=UI.sel||'n40',n=new Date(),sod=new Date(n.getFullYear(),n.getMonth(),n.getDate()).getTime(),D=864e5;
+  if(s[0]==='n')return null;
+  if(s==='today')return{from:sod,to:sod+D-1,label:'Hôm nay'};
+  if(s==='7'||s==='30')return{from:new Date(n.getFullYear(),n.getMonth(),n.getDate()-(+s-1)).getTime(),to:Infinity,label:s+' ngày gần nhất'};
+  if(s==='month')return{from:new Date(n.getFullYear(),n.getMonth(),1).getTime(),to:new Date(n.getFullYear(),n.getMonth()+1,1).getTime()-1,label:'Tháng này'};
+  if(s==='prev')return{from:new Date(n.getFullYear(),n.getMonth()-1,1).getTime(),to:new Date(n.getFullYear(),n.getMonth(),1).getTime()-1,label:'Tháng trước'};
+  const f=dayStart(UI.from),t=dayStart(UI.to);
+  if(s==='day'){const a=isNaN(f)?sod:f;return{from:a,to:new Date(new Date(a).getFullYear(),new Date(a).getMonth(),new Date(a).getDate()+1).getTime()-1,label:'Ngày '+fmtDMY(a)}}
+  const a=isNaN(f)?0:f,b=isNaN(t)?Infinity:new Date(new Date(t).getFullYear(),new Date(t).getMonth(),new Date(t).getDate()+1).getTime()-1;
+  return{from:a,to:b,label:(isNaN(f)?'…':fmtDMY(a))+' – '+(isNaN(t)?'…':fmtDMY(t))};
+}
+const fmtDMY=ts=>{const d=new Date(ts);return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`};
+function lastN(arr){const v=viewRange();if(v)return arr.filter(p=>p.r.ts>=v.from&&p.r.ts<=v.to);return UI.lastN>0?arr.slice(-UI.lastN):arr}
+function viewControls(){
+  const s=UI.sel,opts=VIEW_OPTS.map(([v,l])=>`<option value="${v}" ${v===s?'selected':''}>${l}</option>`).join('');
+  let h=`<div class="vctl"><label class="fld" style="flex-direction:row;align-items:center;gap:6px">Xem <select id="viewSel" style="width:auto">${opts}</select></label>`;
+  if(s==='day')h+=`<button class="sm" data-act="dayPrev" title="Ngày trước">◀</button><input type="date" id="vFrom" value="${esc(UI.from)}" style="width:auto"><button class="sm" data-act="dayNext" title="Ngày sau">▶</button><button class="sm" data-act="dayToday">Hôm nay</button>`;
+  if(s==='custom')h+=`<label class="fld" style="flex-direction:row;align-items:center;gap:6px">Từ <input type="date" id="vFrom" value="${esc(UI.from)}" style="width:auto"></label><label class="fld" style="flex-direction:row;align-items:center;gap:6px">đến <input type="date" id="vTo" value="${esc(UI.to)}" style="width:auto"></label>`;
+  return h+'</div>';
+}
+const emptyMsg=()=>viewRange()?`<div class="muted">Không có kết quả trong khoảng thời gian đã chọn.</div>`:`<div class="muted">Chưa có kết quả.</div>`;
 
 function evLines(t,ts,X,y1,y2,xmax){
   const n=ts.length;if(!n)return'';let s='';
+  const vr=viewRange();
   evFor(t).forEach(e=>{
+    if(vr&&(e.ts<vr.from||e.ts>vr.to))return;
     const i=ts.findIndex(v=>v>=e.ts);
     if(i===0)return;
     let x;
@@ -340,7 +368,7 @@ function ljChart(level,pts,t){
 }
 function zChart(t,levelSeries){
   const M=MOB(),W=M?420:840,H=M?270:300,L=M?40:64,R=M?38:48,Tp=14,B=M?32:36;
-  const runs=[...new Set(levelSeries.flatMap(ls=>ls.pts.map(p=>p.r.run)))].sort().slice(UI.lastN>0?-UI.lastN:0);
+  const runs=[...new Set(levelSeries.flatMap(ls=>ls.pts.map(p=>p.r.run)))].sort().slice(!viewRange()&&UI.lastN>0?-UI.lastN:0);
   const n=runs.length;if(!n)return'';
   let lim=4;levelSeries.forEach(ls=>ls.pts.forEach(p=>{if(runs.includes(p.r.run))lim=Math.max(lim,Math.ceil(Math.abs(p.o.z)+.3))}));
   const X=i=>n<=1?L+(W-L-R)/2:L+(W-L-R)*i/(n-1),Y=v=>Tp+(H-Tp-B)*(lim-v)/(2*lim);
@@ -410,20 +438,20 @@ function renderMain(){
   }
   if(!t.levels.length)h+=`<div class="card muted">Chưa có mức QC nào — bấm “Khai báo” để thêm.</div>`;
   else{
-    h+=`<div class="card"><div class="head"><h2>Biểu đồ theo dõi</h2><span class="spacer"></span><label class="fld" style="flex-direction:row;align-items:center;gap:6px">Hiển thị <select id="lastN" style="width:auto"><option value="20">20 điểm gần nhất</option><option value="40">40 điểm gần nhất</option><option value="90">90 điểm gần nhất</option><option value="0">Tất cả</option></select></label></div>`;
+    h+=`<div class="card"><div class="head"><h2>Biểu đồ theo dõi</h2><span class="spacer"></span>${viewControls()}</div>${viewRange()?`<div class="muted" style="margin:-4px 0 8px;font-size:13px">Đang xem: ${esc(viewRange().label)}</div>`:''}`;
     const series=t.levels.map(l=>({level:l,pts:lastN(res.filter(r=>isCur(t,l,r)&&out[r.id]).map(r=>({r,o:out[r.id]})))}));
     if(t.type==='quant'){
-      if(series.length>=2){h+=`<h3 style="font-size:14px;margin:6px 0">Tất cả các mức (z-score)</h3>`+zChart(t,series)}
+      if(series.length>=2){const zc=zChart(t,series);if(zc)h+=`<h3 style="font-size:14px;margin:6px 0">Tất cả các mức (z-score)</h3>`+zc}
       series.forEach(ls=>{
         h+=`<h3 style="font-size:14px;margin:14px 0 2px">${esc(ls.level.name)} <small class="muted">${ls.level.lot?'lô '+esc(ls.level.lot)+' · ':''}TB ${fmt(ls.level.mean,d)} · SD ${fmt(ls.level.sd,d)} · CV ${fmt(ls.level.sd/ls.level.mean*100,1)}%</small></h3>`;
-        h+=ls.pts.length?legend('',true)+ljChart(ls.level,ls.pts,t):`<div class="muted">Chưa có kết quả.</div>`;
+        h+=ls.pts.length?legend('',true)+ljChart(ls.level,ls.pts,t):emptyMsg();
         const old=res.filter(r=>r.levelId===ls.level.id&&!isCur(t,ls.level,r)).length;
         if(old)h+=`<small class="muted">${old} kết quả thuộc lô/thông số cũ — xem trong bảng bên dưới.</small>`;
       });
     }else{
       series.forEach(ls=>{
         h+=`<h3 style="font-size:14px;margin:14px 0 2px">${esc(ls.level.name)} <small class="muted">${ls.level.lot?'lô '+esc(ls.level.lot)+' · ':''}mục tiêu: ${esc(ls.level.expected)}${t.type==='semi'?` (±${ls.level.tol||0} bậc)`:''}</small></h3>`;
-        h+=ls.pts.length?legend()+stepChart(ls.level,ls.pts,t):`<div class="muted">Chưa có kết quả.</div>`;
+        h+=ls.pts.length?legend()+stepChart(ls.level,ls.pts,t):emptyMsg();
       });
     }
     h+='</div>';
@@ -431,7 +459,6 @@ function renderMain(){
   }
   h+=tableHTML(t,res,out);
   $('#main').innerHTML=wrapSvg(h);
-  const sel=$('#lastN');if(sel)sel.value=String(UI.lastN);
 }
 function sumHTML(t,res,out){
   if(!t.levels.length)return'';
@@ -474,7 +501,9 @@ function statsHTML(t,res,out){
 }
 function tableHTML(t,res,out){
   const d=t.dec??2;
-  const items=[...res.map(r=>({k:'r',ts:r.ts,r})),...evFor(t).map(e=>({k:'e',ts:e.ts,e}))].sort((a,b)=>b.ts-a.ts);
+  const vr=viewRange();
+  let items=[...res.map(r=>({k:'r',ts:r.ts,r})),...evFor(t).map(e=>({k:'e',ts:e.ts,e}))].sort((a,b)=>b.ts-a.ts);
+  if(vr)items=items.filter(it=>it.ts>=vr.from&&it.ts<=vr.to);
   const shown=UI.showAll?items:items.slice(0,40);
   const rows=shown.map(it=>{
     if(it.k==='e'){const e=it.e,ev=EVT[e.type];
@@ -485,7 +514,7 @@ function tableHTML(t,res,out){
     const rb=r.reason&&r.reason!=='Thường quy'?`<br><span class="badge">${esc(r.reason)}</span>`:'';
     const fl=o.flags.join(', ');
     return `<tr class="rr ${o.status}"><td class="ctime">${fmtDT(r.ts)}${rb}</td><td class="clv">${esc(r.levelName)}${r.lot?`<br><small class="muted">lô ${esc(r.lot)}</small>`:''}</td><td class="cval">${dv}</td><td class="cst"><span class="badge ${o.status}">${stl}</span><span class="fl"> ${esc(fl)}</span></td><td class="cop">${esc(r.op||'')}</td><td class="cnote">${esc(r.note||'')}${r.action?`<br><small><b>Khắc phục:</b> ${esc(r.action)}</small>`:''}</td><td class="cact" style="white-space:nowrap">${o.status!=='ok'?`<button class="sm" data-act="advice" data-id="${r.id}" title="Gợi ý nguyên nhân & xử trí">💡</button> <button class="sm" data-act="action" data-id="${r.id}" title="Ghi hành động khắc phục">⚑</button> `:''}<button class="sm danger" data-act="delRes" data-id="${r.id}" title="Xóa">✕</button></td><td class="cfl">${esc(fl)}</td></tr>`}).join('');
-  return `<div class="card"><h2>Kết quả và sự kiện thiết bị (${res.length} kết quả)</h2>${items.length?`<div class="scroll"><table class="m rt"><tr class="hd"><th>Thời gian</th><th>Mức</th><th>Kết quả</th><th>Đánh giá</th><th>Người TH</th><th>Ghi chú</th><th></th></tr>${rows}</table></div>${items.length>40?`<p><button class="sm" data-act="toggleAll">${UI.showAll?'Thu gọn':'Xem tất cả'}</button></p>`:''}`:'<div class="muted">Chưa có dữ liệu.</div>'}</div>`;
+  return `<div class="card"><h2>Kết quả và sự kiện thiết bị (${items.filter(i=>i.k==='r').length} kết quả${vr?' · '+esc(vr.label):''})</h2>${items.length?`<div class="scroll"><table class="m rt"><tr class="hd"><th>Thời gian</th><th>Mức</th><th>Kết quả</th><th>Đánh giá</th><th>Người TH</th><th>Ghi chú</th><th></th></tr>${rows}</table></div>${items.length>40?`<p><button class="sm" data-act="toggleAll">${UI.showAll?'Thu gọn':'Xem tất cả'}</button></p>`:''}`:'<div class="muted">Chưa có dữ liệu.</div>'}</div>`;
 }
 
 /* ---------- nhập kết quả ---------- */
@@ -1021,9 +1050,9 @@ function openReport(scope,period,lab){
   const order=id=>S.devices.findIndex(d=>d.id===id);
   let tests=scope==='test'&&t0?[t0]:scope==='device'&&t0?S.tests.filter(t=>t.deviceId===t0.deviceId):[...S.tests];
   tests=tests.sort((a,b)=>order(a.deviceId)-order(b.deviceId));
-  const keep=UI.lastN;UI.lastN=0;
+  const keep=UI.lastN,keepSel=UI.sel;UI.lastN=0;UI.sel='n0';
   const parts=tests.map(t=>({t,...reportTest(t,range)}));
-  UI.lastN=keep;
+  UI.lastN=keep;UI.sel=keepSel;
   const top=parts.length>1?`<h2>Tổng hợp</h2><div class="scroll"><table><tr><th>Thiết bị</th><th>Xét nghiệm</th><th>Số KQ</th><th>Đạt</th><th>Cảnh báo</th><th>Vi phạm</th></tr>${parts.map(p=>`<tr><td>${esc(D(p.t.deviceId)?.name||'')}</td><td>${esc(p.t.name)}</td><td>${p.sum.n}</td><td>${p.sum.ok}</td><td>${p.sum.warn}</td><td>${p.sum.fail}</td></tr>`).join('')}</table></div>`:'';
   const dt=new Date();
   $('#rep').innerHTML=wrapSvg(`<div class="bar"><button class="pri" data-act="repPrint">In / Lưu PDF</button><button data-act="repClose">Đóng</button></div><div class="page"><h1>Báo cáo nội kiểm xét nghiệm</h1><div style="color:#555">${lab?esc(lab)+' · ':''}Kỳ báo cáo: ${esc(range.label)} · Ngày lập: ${pad(dt.getDate())}/${pad(dt.getMonth()+1)}/${dt.getFullYear()}</div>${top}${parts.map(p=>p.html).join('')}<div class="sign"><div>Người lập</div><div>Người phụ trách</div><div>Trưởng khoa / Phê duyệt</div></div><div class="foot"><div>Nội kiểm xét nghiệm (IQC) · Tác giả: <b>Bá Tử Kinh | Tường Vi</b></div><div>© 2026 Bá Tử Kinh | Tường Vi. Bảo lưu mọi quyền.</div></div></div>`);
@@ -1094,6 +1123,7 @@ document.addEventListener('click',e=>{
   else if(a==='report')reportDialog();
   else if(a==='repPrint')window.print();
   else if(a==='repClose')$('#rep').classList.remove('on');
+  else if(a==='dayPrev'||a==='dayNext'||a==='dayToday'){const td=ymd(Date.now());UI.from=a==='dayToday'?td:addDays(UI.from||td,a==='dayPrev'?-1:1);UI.to=UI.from;renderMain()}
   else if(a==='menu'){document.documentElement.style.setProperty('--hh',($('header').offsetHeight)+'px');document.body.classList.toggle('menu')}
   else if(a==='csv')csv(id);
   else if(a==='toggleAll'){UI.showAll=!UI.showAll;render()}
@@ -1105,7 +1135,20 @@ document.addEventListener('click',e=>{
   else if(a==='advice'){const r=S.results.find(x=>x.id===id);showAdvice(b.dataset.flags?b.dataset.flags.split('||'):(r?evalTest(T(r.testId)).out[r.id].flags:[]))}
 });
 document.addEventListener('submit',e=>{if(e.target.id==='entryForm'){e.preventDefault();addRun(new FormData(e.target),e.target)}});
-document.addEventListener('change',e=>{if(e.target.id==='lastN'){UI.lastN=parseInt(e.target.value);renderMain()}});
+document.addEventListener('change',e=>{
+  const id=e.target.id,td=ymd(Date.now());
+  if(id==='viewSel'){
+    const v=e.target.value;UI.sel=v;UI.showAll=false;
+    if(v[0]==='n')UI.lastN=parseInt(v.slice(1));
+    if(v==='day'){if(!UI.from)UI.from=td;UI.to=UI.from}
+    if(v==='custom'){if(!UI.from)UI.from=addDays(td,-6);if(!UI.to)UI.to=td}
+    renderMain();
+  }else if(id==='vFrom'){
+    UI.from=e.target.value;if(UI.sel==='day')UI.to=UI.from;else if(UI.to&&UI.from>UI.to)UI.to=UI.from;renderMain();
+  }else if(id==='vTo'){
+    UI.to=e.target.value;if(UI.from&&UI.to&&UI.to<UI.from)UI.from=UI.to;renderMain();
+  }
+});
 
 /* ---------- khởi động ---------- */
 (async()=>{
@@ -1113,7 +1156,7 @@ document.addEventListener('change',e=>{if(e.target.id==='lastN'){UI.lastN=parseI
     try{const r=await fetch('data.json',{cache:'no-store'});if(r.ok){S=normalize(await r.json());localStorage.setItem(LS,JSON.stringify(S))}}catch(e){}
   }
   if(S.tests.length){UI.testId=S.tests[0].id;UI.deviceId=S.tests[0].deviceId}else document.body.classList.add('menu')
-  if(MOB())UI.lastN=20;
+  if(MOB()){UI.lastN=20;UI.sel='n20'}
   render();
   bootSync();
   let wasMob=MOB(),rt;addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(()=>{const m=MOB();if(m!==wasMob){wasMob=m;if(!$('#rep').classList.contains('on'))render()}},200)});
