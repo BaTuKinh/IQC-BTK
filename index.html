@@ -71,6 +71,13 @@ dialog .mf{padding:10px 16px;border-top:1px solid var(--line);display:flex;gap:8
 .foot .muted{margin-top:2px}
 #rep .foot{border-top:1px solid #ccc;margin-top:24px;padding:8px 0 0;color:#555}
 .menu{display:none}
+.closemenu{display:none}
+.ic{display:none}
+table.rt .cfl{display:none}
+.sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin:2px 0 14px}
+.sc{border:1px solid var(--line);border-left:4px solid var(--ok);border-radius:8px;padding:8px 10px;min-width:0}
+.sc.warn{border-left-color:var(--warn)}.sc.fail{border-left-color:var(--fail)}
+.sc .sn{font-size:13px;color:var(--mute);font-weight:600}.sc .sv{font-size:22px;font-weight:700;line-height:1.25}.sc .sv small{font-size:13px;font-weight:400;color:var(--mute)}.sc .ss{font-size:12.5px;color:var(--mute);margin-top:1px}
 .app>*{min-width:0}
 .cw{overflow-x:auto}
 @media(max-width:820px){
@@ -81,13 +88,49 @@ dialog .mf{padding:10px 16px;border-top:1px solid var(--line);display:flex;gap:8
  .head{gap:6px}
  .menu{display:inline-block}
  .side{display:none}
- body.menu .side{display:block}
+ body.menu .side{display:block;position:fixed;left:0;right:0;top:var(--hh,56px);bottom:0;z-index:12;margin:0;border-radius:0;border-width:1px 0 0;overflow:auto;-webkit-overflow-scrolling:touch;box-shadow:0 10px 30px rgba(0,0,0,.3)}
+ body.menu{overflow:hidden}
+ .closemenu{display:block!important;width:100%;margin-bottom:12px}
  input,select,textarea{font-size:16px}
- svg.chart{min-width:680px}
- header{padding:10px 12px;gap:8px}
+  header{padding:10px 12px;gap:8px}
  header h1{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
  button{padding:8px 12px}
  .card{padding:12px}
+ .lb{display:none}.ic{display:inline}
+ .sum{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+ .sc{padding:6px 8px}.sc .sv{font-size:19px}.sc .ss{font-size:12px}
+ .head h2{font-size:18px}
+ .head button{padding:5px 9px;font-size:13px}
+ .legend.sec{display:none}
+ .lvrow>*{flex:1 1 calc(50% - 10px)}
+ .metarow>*{flex:1 1 calc(50% - 10px)!important;min-width:0}
+ .metarow>label:first-child,.metarow>label:nth-last-child(2),.metarow>button{flex-basis:100%!important}
+ .metarow>button{padding:11px}
+ input[type=datetime-local]{min-height:42px;text-align:left}
+ table.m,table.m tbody{display:block}
+ table.m tr.hd{display:none}
+ table.m tr{display:grid;gap:2px 10px;padding:10px 2px;border-bottom:1px solid var(--line)}
+ table.m td,table.m td:empty{border:0;padding:0}
+ table.m td:empty{display:none}
+ table.rt tr.rr{grid-template-columns:1fr auto;grid-template-areas:"time st" "lv val" "fl fl" "note note" "op act"}
+ table.rt tr.rr.fail{border-left:3px solid var(--fail);padding-left:8px}
+ table.rt tr.rr.warn{border-left:3px solid var(--warn);padding-left:8px}
+ table.rt .ctime{grid-area:time;font-weight:600}
+ table.rt .cst{grid-area:st;text-align:right}
+ table.rt .cst .fl{display:none}
+ table.rt .clv{grid-area:lv}
+ table.rt .cval{grid-area:val;text-align:right;font-size:17px;font-weight:600}
+ table.rt .cfl{display:block;grid-area:fl;color:var(--mute);font-size:13px}
+ table.rt .cnote{grid-area:note;font-size:13px}
+ table.rt .cop{grid-area:op;color:var(--mute);font-size:13px;align-self:center}
+ table.rt .cact{grid-area:act;text-align:right}
+ table.rt tr.evrow{grid-template-columns:1fr auto;grid-template-areas:"time act" "txt txt"}
+ table.rt tr.evrow td{background:transparent}
+ table.rt .ctxt{grid-area:txt}
+ table.stt tr{grid-template-columns:repeat(4,1fr)}
+ table.stt .cname{grid-column:1/-1;font-weight:600;font-size:15px}
+ table.stt td[data-l]::before{content:attr(data-l);display:block;font-size:11px;color:var(--mute);font-weight:400}
+ table.stt td[colspan]{grid-column:2/-1}
 }
 #rep{position:fixed;inset:0;z-index:30;background:#fff;color:#111;overflow:auto;display:none;--ink:#111;--mute:#555;--line:#d9dde4;--accent:#1f66d6;--ok:#1a7f5a;--warn:#b86e00;--fail:#c62f3d;--band:#eaf3ff;--band2:#fff6e2;--grid:#7b8494;--soft:#f0f2f6;--ev:#7a4fd1;--card:#fff;--bg:#fff}
 #rep.on{display:block}
@@ -105,8 +148,8 @@ dialog .mf{padding:10px 16px;border-top:1px solid var(--line);display:flex;gap:8
 <header>
   <button id="menuBtn" class="menu" data-act="menu" title="Danh sách thiết bị">☰</button>
   <h1>🧪 Nội kiểm xét nghiệm (IQC)</h1>
-  <button data-act="report">Báo cáo</button>
-  <button data-act="data">Dữ liệu / GitHub</button>
+  <button data-act="report" title="Báo cáo" aria-label="Báo cáo"><span class="lb">Báo cáo</span><span class="ic">📄</span></button>
+  <button data-act="data" title="Dữ liệu / GitHub" aria-label="Dữ liệu / GitHub"><span class="lb">Dữ liệu / GitHub</span><span class="ic">⚙️</span></button>
 </header>
 <div class="app">
   <aside class="side card" id="side"></aside>
@@ -130,6 +173,7 @@ const nowLocal=()=>{const d=new Date();return `${d.getFullYear()}-${pad(d.getMon
 const typeName={quant:'Định lượng',qual:'Định tính',semi:'Định tính có thang đo'};
 const defaultRules={r12:true,r13:true,r22:true,r4s:true,r41:true,r10x:true};
 const ruleNames={r12:'1-2s (cảnh báo)',r13:'1-3s',r22:'2-2s',r4s:'R-4s',r41:'4-1s',r10x:'10x'};
+const MOB=()=>!!(window.matchMedia&&matchMedia('(max-width:820px)').matches);
 const PALETTE=['#2f6fed','#d9731a','#1f9d6b','#8a4fd1','#0e9aa7','#c2417c'];
 const LS='iqc.v1',GH='iqc.gh';
 const EVT={maint:{n:'Bảo trì / bảo dưỡng',c:'BT',reset:false},calib:{n:'Hiệu chuẩn',c:'HC',reset:true},service:{n:'Sửa chữa / thay linh kiện',c:'SC',reset:true},reagent:{n:'Đổi lô thuốc thử',c:'TT',reset:true},qclot:{n:'Đổi lô vật liệu QC',c:'LQ',reset:true},other:{n:'Sự kiện khác',c:'•',reset:false}};
@@ -258,11 +302,11 @@ function marker(x,y,st,title,color){
 }
 function xTicks(items,X,y){
   const n=items.length;if(!n)return'';
-  const step=Math.max(1,Math.ceil(n/9));let s='';
-  items.forEach((p,i)=>{if(i%step===0||i===n-1)s+=`<text x="${X(i)}" y="${y}" class="tk" text-anchor="middle">${fmtD(p.r.ts)}</text>`});
+  const step=Math.max(1,Math.ceil(n/(MOB()?5:9)));let s='';
+  items.forEach((p,i)=>{if(i%step===0||i===n-1)s+=`<text x="${X(i)}" y="${y}" class="tk" text-anchor="${i===n-1&&n>1?'end':'middle'}">${fmtD(p.r.ts)}</text>`});
   return s;
 }
-function legend(extra=''){return `<div class="legend"><span><i style="background:var(--accent)"></i>Đạt</span><span>▲ Cảnh báo</span><span>■ Vi phạm / ngoài giới hạn</span>${extra}${S.events.length?'<span style="color:var(--ev)">┆ Sự kiện thiết bị (BT bảo trì · HC hiệu chuẩn · SC sửa chữa · TT thuốc thử · LQ lô QC)</span>':''}</div>`}
+function legend(extra='',sec=false){return `<div class="legend${sec?' sec':''}"><span><i style="background:var(--accent)"></i>Đạt</span><span>▲ Cảnh báo</span><span>■ Vi phạm / ngoài giới hạn</span>${extra}${S.events.length?'<span style="color:var(--ev)">┆ Sự kiện thiết bị (BT bảo trì · HC hiệu chuẩn · SC sửa chữa · TT thuốc thử · LQ lô QC)</span>':''}</div>`}
 function lastN(arr){return UI.lastN>0?arr.slice(-UI.lastN):arr}
 
 function evLines(t,ts,X,y1,y2,xmax){
@@ -278,7 +322,7 @@ function evLines(t,ts,X,y1,y2,xmax){
   return s;
 }
 function ljChart(level,pts,t){
-  const d=t.dec??2,n=pts.length,W=840,H=300,L=64,R=48,Tp=14,B=36;
+  const M=MOB(),d=t.dec??2,n=pts.length,W=M?420:840,H=M?270:300,L=M?48:64,R=M?38:48,Tp=14,B=M?32:36;
   const m=level.mean,s=level.sd;
   let lo=m-3.6*s,hi=m+3.6*s;
   pts.forEach(p=>{lo=Math.min(lo,p.r.value-.2*s);hi=Math.max(hi,p.r.value+.2*s)});
@@ -295,7 +339,7 @@ function ljChart(level,pts,t){
   return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Biểu đồ Levey-Jennings ${esc(level.name)}">${g}</svg>`;
 }
 function zChart(t,levelSeries){
-  const W=840,H=300,L=64,R=48,Tp=14,B=36;
+  const M=MOB(),W=M?420:840,H=M?270:300,L=M?40:64,R=M?38:48,Tp=14,B=M?32:36;
   const runs=[...new Set(levelSeries.flatMap(ls=>ls.pts.map(p=>p.r.run)))].sort().slice(UI.lastN>0?-UI.lastN:0);
   const n=runs.length;if(!n)return'';
   let lim=4;levelSeries.forEach(ls=>ls.pts.forEach(p=>{if(runs.includes(p.r.run))lim=Math.max(lim,Math.ceil(Math.abs(p.o.z)+.3))}));
@@ -317,7 +361,7 @@ function zChart(t,levelSeries){
   return legend(lg)+`<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Biểu đồ z-score nhiều mức">${g}</svg>`;
 }
 function stepChart(level,pts,t){
-  const sc=t.scale,rows=sc.length,rowH=34,W=840,L=90,R=20,Tp=12,B=34,H=Tp+B+rows*rowH,n=pts.length;
+  const M=MOB(),sc=t.scale,rows=sc.length,rowH=M?30:34,W=M?420:840,L=M?74:90,R=M?12:20,Tp=12,B=M?30:34,H=Tp+B+rows*rowH,n=pts.length;
   const X=i=>n<=1?L+(W-L-R)/2:L+(W-L-R)*i/(n-1),Y=k=>Tp+(rows-1-k+.5)*rowH;
   const e=sc.indexOf(level.expected),tol=level.tol||0;
   let g='';
@@ -338,7 +382,7 @@ function stepChart(level,pts,t){
 /* ---------- giao diện chính ---------- */
 function render(){renderSide();renderMain()}
 function renderSide(){
-  let h='';
+  let h='<button class="sm closemenu" data-act="menu">✕ Đóng danh sách</button>';
   S.devices.forEach(d=>{
     h+=`<div class="dev"><h3><span>${esc(d.name)}</span><span><button class="sm" data-act="editDevice" data-id="${d.id}" title="Sửa thiết bị">✎</button> <button class="sm" data-act="newTest" data-id="${d.id}" title="Thêm xét nghiệm">＋</button></span></h3>`;
     const ts=S.tests.filter(t=>t.deviceId===d.id);
@@ -357,7 +401,7 @@ function renderMain(){
   }
   const dev=D(t.deviceId),d=t.dec??2,{res,out}=evalTest(t);
   let h=`<div class="card"><div class="head"><h2>${esc(t.name)}</h2><span class="badge">${typeName[t.type]}</span><span class="muted">${esc(dev?.name||'')}${t.unit?' · '+esc(t.unit):''}${t.tea&&t.tea.value>0?` · TEa ${t.tea.value}${t.tea.kind==='pct'?'%':' '+esc(t.unit||'')}`:''}</span><span class="spacer"></span>
-  <button data-act="newEvent" data-id="${t.id}">＋ Sự kiện</button><button data-act="editTest" data-id="${t.id}">Khai báo</button><button data-act="csv" data-id="${t.id}">CSV</button><button data-act="xlsx" data-id="${t.id}">Excel</button><button class="danger" data-act="delTest" data-id="${t.id}">Xóa</button></div>${entryHTML(t)}</div>`;
+  <button data-act="newEvent" data-id="${t.id}">＋ Sự kiện</button><button data-act="editTest" data-id="${t.id}">Khai báo</button><button data-act="csv" data-id="${t.id}">CSV</button><button data-act="xlsx" data-id="${t.id}">Excel</button><button class="danger" data-act="delTest" data-id="${t.id}">Xóa</button></div>${sumHTML(t,res,out)}${entryHTML(t)}</div>`;
   if(UI.flash){h+=UI.flash;UI.flash=null}
   else if(res.length){
     const last=res[res.length-1].run;
@@ -372,7 +416,7 @@ function renderMain(){
       if(series.length>=2){h+=`<h3 style="font-size:14px;margin:6px 0">Tất cả các mức (z-score)</h3>`+zChart(t,series)}
       series.forEach(ls=>{
         h+=`<h3 style="font-size:14px;margin:14px 0 2px">${esc(ls.level.name)} <small class="muted">${ls.level.lot?'lô '+esc(ls.level.lot)+' · ':''}TB ${fmt(ls.level.mean,d)} · SD ${fmt(ls.level.sd,d)} · CV ${fmt(ls.level.sd/ls.level.mean*100,1)}%</small></h3>`;
-        h+=ls.pts.length?legend()+ljChart(ls.level,ls.pts,t):`<div class="muted">Chưa có kết quả.</div>`;
+        h+=ls.pts.length?legend('',true)+ljChart(ls.level,ls.pts,t):`<div class="muted">Chưa có kết quả.</div>`;
         const old=res.filter(r=>r.levelId===ls.level.id&&!isCur(t,ls.level,r)).length;
         if(old)h+=`<small class="muted">${old} kết quả thuộc lô/thông số cũ — xem trong bảng bên dưới.</small>`;
       });
@@ -389,30 +433,44 @@ function renderMain(){
   $('#main').innerHTML=wrapSvg(h);
   const sel=$('#lastN');if(sel)sel.value=String(UI.lastN);
 }
+function sumHTML(t,res,out){
+  if(!t.levels.length)return'';
+  const d=t.dec??2,q=t.type==='quant';
+  const cards=t.levels.map(l=>{
+    const pts=res.filter(r=>isCur(t,l,r)&&out[r.id]),last=pts[pts.length-1];
+    if(!last)return `<div class="sc"><div class="sn">${esc(l.name)}</div><div class="muted" style="font-size:13px">Chưa có kết quả</div></div>`;
+    const o=out[last.id],cls=o.status==='ok'?'':o.status;
+    const val=q?`${fmt(last.value,d)} <small>${esc(t.unit||'')}</small>`:esc(last.value);
+    const sub=q?`z = ${fmt(o.z,2)}`:(t.type==='semi'?`lệch ${o.dev>0?'+':''}${o.dev} bậc · mục tiêu ${esc(l.expected)}`:`mục tiêu: ${esc(l.expected)}`);
+    const stl={ok:'Đạt',warn:'Cảnh báo',fail:'Vi phạm'}[o.status];
+    return `<div class="sc ${cls}"><div class="sn">${esc(l.name)}</div><div class="sv">${val}</div><div class="ss">${sub}</div><div class="ss"><span class="badge ${o.status}">${stl}</span> ${o.flags.length?esc(o.flags.join(', ')):''}</div><div class="ss">${fmtDT(last.ts)} · n=${pts.length}</div></div>`;
+  }).join('');
+  return `<div class="sum">${cards}</div>`;
+}
 function entryHTML(t){
   if(!t.levels.length)return'';
   const d=t.dec??2,dr=defaultReason(t);
   const f=t.levels.map(l=>`<label class="fld"><span>${esc(l.name)}${l.lot?` <small>(lô ${esc(l.lot)})</small>`:''}</span>${t.type==='quant'?`<input name="v_${l.id}" inputmode="decimal" autocomplete="off" placeholder="${esc(t.unit||'giá trị')}">`:`<select name="v_${l.id}"><option value="">— không chạy —</option>${t.scale.map(s=>`<option>${esc(s)}</option>`).join('')}</select>`}<small>Mục tiêu: ${t.type==='quant'?fmt(l.mean,d)+' ± '+fmt(l.sd,d):esc(l.expected)+(t.type==='semi'?' (±'+(l.tol||0)+' bậc)':'')}</small></label>`).join('');
-  return `<form id="entryForm" data-test="${t.id}"><div class="row">${f}</div><div class="row" style="margin-top:10px"><label class="fld"><span>Ngày giờ</span><input type="datetime-local" name="dt" value="${nowLocal()}" required></label><label class="fld"><span>Lý do chạy QC</span><select name="reason">${REASONS.map(x=>`<option ${x===dr?'selected':''}>${x}</option>`).join('')}</select></label><label class="fld"><span>Người thực hiện</span><input name="op" autocomplete="off"></label><label class="fld" style="flex:2 1 220px"><span>Ghi chú</span><input name="note" autocomplete="off"></label><button class="pri" type="submit" style="flex:0 0 auto">Lưu kết quả</button></div></form>`;
+  return `<form id="entryForm" data-test="${t.id}"><div class="row lvrow">${f}</div><div class="row metarow" style="margin-top:10px"><label class="fld"><span>Ngày giờ</span><input type="datetime-local" name="dt" value="${nowLocal()}" required></label><label class="fld"><span>Lý do chạy QC</span><select name="reason">${REASONS.map(x=>`<option ${x===dr?'selected':''}>${x}</option>`).join('')}</select></label><label class="fld"><span>Người thực hiện</span><input name="op" autocomplete="off"></label><label class="fld" style="flex:2 1 220px"><span>Ghi chú</span><input name="note" autocomplete="off"></label><button class="pri" type="submit" style="flex:0 0 auto">Lưu kết quả</button></div></form>`;
 }
 function statsHTML(t,res,out){
   if(t.type==='quant'){
     const d=t.dec??2;let rows='';
     t.levels.forEach(l=>{
       const v=res.filter(r=>isCur(t,l,r)).map(r=>r.value),n=v.length;
-      if(!n){rows+=`<tr><td>${esc(l.name)}</td><td>0</td><td colspan="6" class="muted">—</td></tr>`;return}
+      if(!n){rows+=`<tr><td class="cname">${esc(l.name)}</td><td data-l="n">0</td><td colspan="6" class="muted">—</td></tr>`;return}
       const mean=v.reduce((a,b)=>a+b,0)/n,sd=n>1?Math.sqrt(v.reduce((a,b)=>a+(b-mean)**2,0)/(n-1)):NaN,cv=sd/mean*100,bias=(mean-l.mean)/l.mean*100;
       const sig=t.tea&&t.tea.kind==='pct'&&t.tea.value>0&&n>1?(t.tea.value-Math.abs(bias))/cv:NaN;
-      rows+=`<tr><td>${esc(l.name)}</td><td>${n}</td><td>${fmt(l.mean,d)}</td><td>${fmt(mean,d)}</td><td>${fmt(sd,d)}</td><td>${fmt(cv,1)}%</td><td>${fmt(bias,1)}%</td><td>${fmt(sig,1)}</td></tr>`;
+      rows+=`<tr><td class="cname">${esc(l.name)}</td><td data-l="n">${n}</td><td data-l="TB mục tiêu">${fmt(l.mean,d)}</td><td data-l="TB thực tế">${fmt(mean,d)}</td><td data-l="SD thực tế">${fmt(sd,d)}</td><td data-l="CV%">${fmt(cv,1)}%</td><td data-l="Bias%">${fmt(bias,1)}%</td><td data-l="Sigma">${fmt(sig,1)}</td></tr>`;
     });
-    return `<div class="card"><h2>Thống kê (lô hiện tại)</h2><div class="scroll"><table><tr><th>Mức</th><th>n</th><th>TB mục tiêu</th><th>TB thực tế</th><th>SD thực tế</th><th>CV%</th><th>Bias%</th><th>Sigma</th></tr>${rows}</table></div><small class="muted">Sigma = (TEa% − |Bias%|) / CV%, chỉ tính khi TEa khai báo theo %.</small></div>`;
+    return `<div class="card"><h2>Thống kê (lô hiện tại)</h2><div class="scroll"><table class="m stt"><tr class="hd"><th>Mức</th><th>n</th><th>TB mục tiêu</th><th>TB thực tế</th><th>SD thực tế</th><th>CV%</th><th>Bias%</th><th>Sigma</th></tr>${rows}</table></div><small class="muted">Sigma = (TEa% − |Bias%|) / CV%, chỉ tính khi TEa khai báo theo %.</small></div>`;
   }
   let rows='';
   t.levels.forEach(l=>{
     const cur=res.filter(r=>isCur(t,l,r)&&out[r.id]),n=cur.length,ok=cur.filter(r=>out[r.id].status!=='fail').length;
-    rows+=`<tr><td>${esc(l.name)}</td><td>${esc(l.expected)}</td><td>${n}</td><td>${n?fmt(ok/n*100,1)+'%':'–'}</td><td>${cur.filter(r=>out[r.id].status==='fail').length}</td></tr>`;
+    rows+=`<tr><td class="cname">${esc(l.name)}</td><td data-l="Mục tiêu">${esc(l.expected)}</td><td data-l="n">${n}</td><td data-l="Tỷ lệ đạt">${n?fmt(ok/n*100,1)+'%':'–'}</td><td data-l="Không đạt">${cur.filter(r=>out[r.id].status==='fail').length}</td></tr>`;
   });
-  return `<div class="card"><h2>Thống kê (lô hiện tại)</h2><div class="scroll"><table><tr><th>Mức</th><th>Mục tiêu</th><th>n</th><th>Tỷ lệ đạt</th><th>Không đạt</th></tr>${rows}</table></div></div>`;
+  return `<div class="card"><h2>Thống kê (lô hiện tại)</h2><div class="scroll"><table class="m stt"><tr class="hd"><th>Mức</th><th>Mục tiêu</th><th>n</th><th>Tỷ lệ đạt</th><th>Không đạt</th></tr>${rows}</table></div></div>`;
 }
 function tableHTML(t,res,out){
   const d=t.dec??2;
@@ -420,13 +478,14 @@ function tableHTML(t,res,out){
   const shown=UI.showAll?items:items.slice(0,40);
   const rows=shown.map(it=>{
     if(it.k==='e'){const e=it.e,ev=EVT[e.type];
-      return `<tr class="evrow"><td>${fmtDT(e.ts)}</td><td colspan="5"><b>${ev.c}</b> <b>${esc(ev.n)}</b>${e.testId?'':' <small class="muted">(toàn thiết bị)</small>'}${e.note?' — '+esc(e.note):''}${e.op?` <small class="muted">· ${esc(e.op)}</small>`:''}${e.reset?' <small class="muted">· bắt đầu chuỗi quy tắc mới</small>':''}</td><td><button class="sm danger" data-act="delEvt" data-id="${e.id}" title="Xóa sự kiện">✕</button></td></tr>`}
+      return `<tr class="evrow"><td class="ctime">${fmtDT(e.ts)}</td><td colspan="5" class="ctxt"><b>${ev.c}</b> <b>${esc(ev.n)}</b>${e.testId?'':' <small class="muted">(toàn thiết bị)</small>'}${e.note?' — '+esc(e.note):''}${e.op?` <small class="muted">· ${esc(e.op)}</small>`:''}${e.reset?' <small class="muted">· bắt đầu chuỗi quy tắc mới</small>':''}</td><td class="cact"><button class="sm danger" data-act="delEvt" data-id="${e.id}" title="Xóa sự kiện">✕</button></td></tr>`}
     const r=it.r,o=out[r.id]||{flags:[],status:'ok'};
     const dv=t.type==='quant'?`${fmt(r.value,d)} <small class="muted">z ${fmt(o.z,2)}</small>`:`${esc(r.value)} <small class="muted">${t.type==='semi'?'lệch '+(o.dev>0?'+':'')+o.dev:''}</small>`;
     const stl={ok:'Đạt',warn:'Cảnh báo',fail:'Vi phạm'}[o.status];
     const rb=r.reason&&r.reason!=='Thường quy'?`<br><span class="badge">${esc(r.reason)}</span>`:'';
-    return `<tr><td>${fmtDT(r.ts)}${rb}</td><td>${esc(r.levelName)}${r.lot?`<br><small class="muted">lô ${esc(r.lot)}</small>`:''}</td><td>${dv}</td><td><span class="badge ${o.status}">${stl}</span> ${esc(o.flags.join(', '))}</td><td>${esc(r.op||'')}</td><td>${esc(r.note||'')}${r.action?`<br><small><b>Khắc phục:</b> ${esc(r.action)}</small>`:''}</td><td style="white-space:nowrap">${o.status!=='ok'?`<button class="sm" data-act="advice" data-id="${r.id}" title="Gợi ý nguyên nhân & xử trí">💡</button> <button class="sm" data-act="action" data-id="${r.id}" title="Ghi hành động khắc phục">⚑</button> `:''}<button class="sm danger" data-act="delRes" data-id="${r.id}" title="Xóa">✕</button></td></tr>`}).join('');
-  return `<div class="card"><h2>Kết quả và sự kiện thiết bị (${res.length} kết quả)</h2>${items.length?`<div class="scroll"><table><tr><th>Thời gian</th><th>Mức</th><th>Kết quả</th><th>Đánh giá</th><th>Người TH</th><th>Ghi chú</th><th></th></tr>${rows}</table></div>${items.length>40?`<p><button class="sm" data-act="toggleAll">${UI.showAll?'Thu gọn':'Xem tất cả'}</button></p>`:''}`:'<div class="muted">Chưa có dữ liệu.</div>'}</div>`;
+    const fl=o.flags.join(', ');
+    return `<tr class="rr ${o.status}"><td class="ctime">${fmtDT(r.ts)}${rb}</td><td class="clv">${esc(r.levelName)}${r.lot?`<br><small class="muted">lô ${esc(r.lot)}</small>`:''}</td><td class="cval">${dv}</td><td class="cst"><span class="badge ${o.status}">${stl}</span><span class="fl"> ${esc(fl)}</span></td><td class="cop">${esc(r.op||'')}</td><td class="cnote">${esc(r.note||'')}${r.action?`<br><small><b>Khắc phục:</b> ${esc(r.action)}</small>`:''}</td><td class="cact" style="white-space:nowrap">${o.status!=='ok'?`<button class="sm" data-act="advice" data-id="${r.id}" title="Gợi ý nguyên nhân & xử trí">💡</button> <button class="sm" data-act="action" data-id="${r.id}" title="Ghi hành động khắc phục">⚑</button> `:''}<button class="sm danger" data-act="delRes" data-id="${r.id}" title="Xóa">✕</button></td><td class="cfl">${esc(fl)}</td></tr>`}).join('');
+  return `<div class="card"><h2>Kết quả và sự kiện thiết bị (${res.length} kết quả)</h2>${items.length?`<div class="scroll"><table class="m rt"><tr class="hd"><th>Thời gian</th><th>Mức</th><th>Kết quả</th><th>Đánh giá</th><th>Người TH</th><th>Ghi chú</th><th></th></tr>${rows}</table></div>${items.length>40?`<p><button class="sm" data-act="toggleAll">${UI.showAll?'Thu gọn':'Xem tất cả'}</button></p>`:''}`:'<div class="muted">Chưa có dữ liệu.</div>'}</div>`;
 }
 
 /* ---------- nhập kết quả ---------- */
@@ -514,7 +573,7 @@ function editTest(id,deviceId){
     }
     if(t.type==='quant'){const v=num(t.tea.value);t.tea={kind:t.tea.kind,value:isNaN(v)?0:v};delete t.scale}else{delete t.unit;delete t.tea;delete t.rules}
     if(id){S.tests[S.tests.findIndex(x=>x.id===id)]=t}else S.tests.push(t);
-    UI.testId=t.id;UI.deviceId=t.deviceId;save();render();
+    UI.testId=t.id;UI.deviceId=t.deviceId;document.body.classList.remove('menu');save();render();
   });
   draw();
 }
@@ -1035,7 +1094,7 @@ document.addEventListener('click',e=>{
   else if(a==='report')reportDialog();
   else if(a==='repPrint')window.print();
   else if(a==='repClose')$('#rep').classList.remove('on');
-  else if(a==='menu')document.body.classList.toggle('menu');
+  else if(a==='menu'){document.documentElement.style.setProperty('--hh',($('header').offsetHeight)+'px');document.body.classList.toggle('menu')}
   else if(a==='csv')csv(id);
   else if(a==='toggleAll'){UI.showAll=!UI.showAll;render()}
   else if(a==='delTest'){const t=T(id);if(confirm(`Xóa xét nghiệm “${t.name}” và toàn bộ kết quả?`)){S.results=S.results.filter(r=>r.testId!==id);S.events=S.events.filter(e=>e.testId!==id);S.tests=S.tests.filter(x=>x.id!==id);UI.testId=null;save();render()}}
@@ -1054,8 +1113,10 @@ document.addEventListener('change',e=>{if(e.target.id==='lastN'){UI.lastN=parseI
     try{const r=await fetch('data.json',{cache:'no-store'});if(r.ok){S=normalize(await r.json());localStorage.setItem(LS,JSON.stringify(S))}}catch(e){}
   }
   if(S.tests.length){UI.testId=S.tests[0].id;UI.deviceId=S.tests[0].deviceId}else document.body.classList.add('menu')
+  if(MOB())UI.lastN=20;
   render();
   bootSync();
+  let wasMob=MOB(),rt;addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(()=>{const m=MOB();if(m!==wasMob){wasMob=m;if(!$('#rep').classList.contains('on'))render()}},200)});
   if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
 })();
 </script>
