@@ -46,3 +46,13 @@ Trên máy cũ: **Dữ liệu / GitHub → Đẩy lên GitHub** (và nên **Tả
 5. In PDF trên điện thoại: mở Báo cáo → In / Lưu PDF (iPhone: Chia sẻ → In, rồi chụm hai ngón để xem PDF và lưu).
 
 Lưu ý: token lưu trên điện thoại, nên đặt khóa màn hình; nếu mất máy, thu hồi token trong GitHub. Không nên nhập cùng lúc trên hai thiết bị.
+
+## Cài như một ứng dụng (Windows, Mac, điện thoại)
+
+App là PWA nên cài được từ trình duyệt, miễn phí, không cần file .exe/.dmg.
+
+1. Upload **toàn bộ** các file này vào repo app (cùng thư mục gốc): `index.html`, `manifest.webmanifest`, `sw.js`, `icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, `apple-touch-icon.png` (và README.md).
+2. Mở https://batukinh.github.io/IQC-BTK/ bằng **Chrome hoặc Edge**, bấm biểu tượng “Cài đặt” (hình màn hình có mũi tên) ở cuối thanh địa chỉ → Cài đặt. Mac + Safari: Chia sẻ → Thêm vào Dock. iPhone: Safari → Chia sẻ → Thêm vào MH chính. Android: Chrome → ⋮ → Cài đặt ứng dụng.
+3. App có biểu tượng riêng, mở trong cửa sổ riêng và mở được khi mất mạng. Khi có mạng, app tự lấy bản mới nhất.
+
+Lưu ý: dữ liệu của bản cài và của tab trình duyệt thường dùng chung một nơi lưu trên cùng máy, nhưng mỗi máy/điện thoại có dữ liệu riêng, đồng bộ qua GitHub. Sau khi cập nhật app, nếu chưa thấy thay đổi, đóng hẳn app rồi mở lại (hoặc Ctrl+F5).
